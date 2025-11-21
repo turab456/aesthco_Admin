@@ -12,10 +12,14 @@ module.exports = (sequelize) => {
       },
       fullName: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         validate: {
-          len: [2, 50],
-          notEmpty: true,
+          isValidName(value) {
+            if (value === null || value === undefined || value === "") return;
+            if (value.length < 2 || value.length > 50) {
+              throw new Error("Full name must be between 2 and 50 characters");
+            }
+          },
         },
       },
       email: {
@@ -29,9 +33,14 @@ module.exports = (sequelize) => {
       },
       password: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         validate: {
-          len: [8, 100],
+          isValidPassword(value) {
+            if (!value) return;
+            if (value.length < 8 || value.length > 100) {
+              throw new Error("Password must be between 8 and 100 characters");
+            }
+          },
         },
       },
       role: {
@@ -46,6 +55,18 @@ module.exports = (sequelize) => {
       isActive: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
+      },
+      phoneNumber: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        validate: {
+          isValidPhone(value) {
+            if (!value) return;
+            if (value.length < 7 || value.length > 12) {
+              throw new Error("Phone number must be between 7 and 20 characters");
+            }
+          },
+        },
       },
       lastLogin: {
         type: DataTypes.DATE,
@@ -64,7 +85,7 @@ module.exports = (sequelize) => {
       timestamps: true,
       hooks: {
         beforeSave: async (user) => {
-          if (user.changed("password")) {
+          if (user.changed("password") && user.password) {
             const salt = await bcrypt.genSalt(12);
             user.password = await bcrypt.hash(user.password, salt);
           }
@@ -75,6 +96,7 @@ module.exports = (sequelize) => {
 
   // Instance methods
   User.prototype.comparePassword = async function (candidatePassword) {
+    if (!this.password) return false;
     return bcrypt.compare(candidatePassword, this.password);
   };
 

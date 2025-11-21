@@ -122,6 +122,53 @@ class EmailService {
 
     return this.authTransporter.sendMail(mailOptions);
   }
+
+  async sendLoginOTP(email, otp, firstName) {
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: 'Your login code',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #fdfdfd; font-family: Arial, sans-serif;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+              <td align="center" style="padding: 20px;">
+                <table width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #000000;">
+                  <tr>
+                    <td align="center" style="background-color: #000000; padding: 40px 20px;">
+                      <h1 style="color: #ffffff; font-size: 32px; margin: 0;">Hoodie Store</h1>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding: 40px 30px; color: #000000; text-align: center;">
+                      <h2 style="font-size: 22px; margin-top: 0; margin-bottom: 20px;">Your one-time login code</h2>
+                      <p style="font-size: 16px; margin-bottom: 20px;">Hi ${firstName || 'there'},</p>
+                      <p style="font-size: 16px; margin-bottom: 30px;">Use the code below to sign in.</p>
+                      <div style="border: 2px solid #000000; padding: 20px; margin: 30px auto; max-width: 250px;">
+                        <p style="font-size: 48px; font-weight: 500; color: #000000; letter-spacing: 10px; margin: 0;">
+                          ${otp}
+                        </p>
+                      </div>
+                      <p style="font-size: 14px; color: #555555;">This code will expire in 10 minutes.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `
+    };
+
+    return this.authTransporter.sendMail(mailOptions);
+  }
 }
 
 module.exports = new EmailService();

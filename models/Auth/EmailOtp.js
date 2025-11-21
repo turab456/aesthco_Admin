@@ -21,7 +21,7 @@ module.exports = (sequelize) => {
       allowNull: false
     },
     type: {
-      type: DataTypes.ENUM('email_verification', 'password_reset'),
+      type: DataTypes.ENUM('email_verification', 'password_reset', 'login'),
       allowNull: false
     },
     expiresAt: {

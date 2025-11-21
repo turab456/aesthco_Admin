@@ -16,25 +16,25 @@ const createRateLimiter = (windowMs, max, message) => {
 module.exports = {
   loginLimiter: createRateLimiter(
     2 * 60 * 1000, // 2 minutes
-    5, // 5 attempts
+    10, // 10 attempts
     'Too many login attempts, please try again later.'
   ),
   
   registerLimiter: createRateLimiter(
-    5 * 60 * 1000, // 5 minutes
-    5, // 5 registrations
-    'Too many registration attempts, please try again later.'
+    1 * 60 * 1000, // 1 minute
+    10, // 10 registrations per minute
+    'Too many registration attempts, please try again soon.'
   ),
   
   otpLimiter: createRateLimiter(
-    5 * 60 * 1000, // 5 minutes
-    5, // 5 OTP requests
-    'Too many OTP requests, please try again later.'
+    1 * 60 * 1000, // 1 minute
+    20, // 20 OTP requests per minute
+    'Too many OTP requests, please try again in a minute.'
   ),
   
   generalLimiter: createRateLimiter(
-    1 * 60 * 1000, // 1 minutes
-    100, // 100 requests
+    1 * 60 * 1000, // 1 minute
+    500, // generous cap for normal traffic
     'Too many requests, please try again later.'
   )
 };

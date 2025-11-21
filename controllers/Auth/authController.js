@@ -4,7 +4,8 @@ const EmailService = require('../../utils/emailService');
 
 const OTP_TYPES = {
   EMAIL_VERIFICATION: 'email_verification',
-  PASSWORD_RESET: 'password_reset'
+  PASSWORD_RESET: 'password_reset',
+  LOGIN: 'login'
 };
 
 const ROLE = User.ROLES || {};
@@ -27,21 +28,85 @@ const sendVerificationOTP = async (user) => {
   return otpRecord;
 };
 
+const sendLoginOTP = async (user) => {
+  const otpRecord = await EmailOTP.createOTP(user.email, OTP_TYPES.LOGIN);
+  await EmailService.sendLoginOTP(
+    user.email,
+    otpRecord.otp,
+    getFirstName(user.fullName || user.email)
+  );
+  return otpRecord;
+};
+
+const ensureCustomerAccount = async (email, fullName = '') => {
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedName = normalizeName(fullName);
+
+  let user = await User.findOne({ where: { email: normalizedEmail } });
+  let isNew = false;
+
+  if (user && user.role !== DEFAULT_CUSTOMER_ROLE) {
+    throw new Error('This email is registered with a non-customer role. Use password login instead.');
+  }
+
+  if (!user) {
+    user = await User.create({
+      email: normalizedEmail,
+      fullName: normalizedName || null,
+      password: null,
+      role: DEFAULT_CUSTOMER_ROLE,
+      isVerified: false
+    });
+    isNew = true;
+  } else if (normalizedName && !user.fullName) {
+    await user.update({ fullName: normalizedName });
+  }
+
+  if (!user.isActive) {
+    throw new Error('Account is inactive.');
+  }
+
+  return { user, isNew };
+};
+
 class AuthController {
   static async register(req, res) {
     try {
       const { fullName, email, password, role } = req.body;
 
-      if (!fullName || !email || !password) {
-        return res.status(400).json({
-          success: false,
-          message: 'Full name, email, and password are required.'
-        });
-      }
-
       const normalizedEmail = normalizeEmail(email);
       const normalizedName = normalizeName(fullName);
       const requestedRole = ALLOWED_ROLES.includes(role) ? role : DEFAULT_CUSTOMER_ROLE;
+
+      if (!normalizedEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required.'
+        });
+      }
+
+      if (requestedRole === DEFAULT_CUSTOMER_ROLE) {
+        const { user, isNew } = await ensureCustomerAccount(normalizedEmail, normalizedName);
+        await sendLoginOTP(user);
+
+        return res.status(isNew ? 201 : 200).json({
+          success: true,
+          message: 'OTP sent to your email. Please verify to continue.',
+          data: {
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            isNewUser: isNew
+          }
+        });
+      }
+
+      if (!fullName || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name and password are required for this role.'
+        });
+      }
 
       if (requestedRole === SUPER_ADMIN_ROLE) {
         return res.status(403).json({
@@ -91,9 +156,9 @@ class AuthController {
       });
     } catch (error) {
       console.error('Registration error:', error);
-      return res.status(500).json({
+      return res.status(400).json({
         success: false,
-        message: 'Failed to register user.'
+        message: error.message || 'Failed to register user.'
       });
     }
   }
@@ -216,6 +281,34 @@ class AuthController {
       }
 
       const normalizedEmail = normalizeEmail(email);
+      if (!normalizedEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required.'
+        });
+      }
+
+      if (roleContext === DEFAULT_CUSTOMER_ROLE) {
+        try {
+          const { user, isNew } = await ensureCustomerAccount(normalizedEmail);
+          await sendLoginOTP(user);
+
+          return res.status(200).json({
+            success: true,
+            message: 'OTP sent to your email. Please verify to continue.',
+            data: {
+              email: user.email,
+              isNewUser: isNew
+            }
+          });
+        } catch (err) {
+          return res.status(400).json({
+            success: false,
+            message: err.message || 'Unable to start OTP login.'
+          });
+        }
+      }
+
       const user = await User.findOne({ where: { email: normalizedEmail } });
 
       if (!user) {
@@ -236,6 +329,13 @@ class AuthController {
         return res.status(403).json({
           success: false,
           message: `Access denied for ${roleContext} portal.`
+        });
+      }
+
+      if (!password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password is required for this role.'
         });
       }
 
@@ -311,6 +411,116 @@ class AuthController {
   static async loginSuperAdmin(req, res) {
     req.body.role = SUPER_ADMIN_ROLE;
     return AuthController.login(req, res);
+  }
+
+  static async sendCustomerOTP(req, res) {
+    try {
+      const { email, fullName } = req.body;
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required.'
+        });
+      }
+
+      const { user, isNew } = await ensureCustomerAccount(email, fullName);
+      await sendLoginOTP(user);
+
+      return res.json({
+        success: true,
+        message: 'OTP sent to your email. Please verify to continue.',
+        data: {
+          email: user.email,
+          isNewUser: isNew
+        }
+      });
+    } catch (error) {
+      console.error('Send customer OTP error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to send OTP.'
+      });
+    }
+  }
+
+  static async verifyCustomerOTP(req, res) {
+    try {
+      const { email, otp } = req.body;
+      if (!email || !otp) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and OTP are required.'
+        });
+      }
+
+      const normalizedEmail = normalizeEmail(email);
+      const user = await User.findOne({ where: { email: normalizedEmail } });
+
+      if (!user || user.role !== DEFAULT_CUSTOMER_ROLE) {
+        return res.status(404).json({
+          success: false,
+          message: 'Customer account not found. Please use password login for other roles.'
+        });
+      }
+
+      if (!user.isActive) {
+        return res.status(403).json({
+          success: false,
+          message: 'Account is inactive.'
+        });
+      }
+
+      const otpRecord = await EmailOTP.findOne({
+        where: {
+          email: normalizedEmail,
+          type: OTP_TYPES.LOGIN,
+          isUsed: false
+        },
+        order: [['createdAt', 'DESC']]
+      });
+
+      if (!otpRecord) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid OTP found for this email.'
+        });
+      }
+
+      await otpRecord.verify(otp);
+      await user.resetLoginAttempts?.();
+      await user.update({ isVerified: true, lastLogin: new Date() });
+
+      const { accessToken, refreshToken } = JWTUtils.generateTokenPair(user);
+      await RefreshToken.createToken(
+        refreshToken,
+        user.id,
+        req.get('User-Agent') || 'Unknown Device'
+      );
+
+      return res.json({
+        success: true,
+        message: 'OTP verified successfully.',
+        data: {
+          user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+            role: user.role,
+            isVerified: user.isVerified
+          },
+          accessToken,
+          refreshToken,
+          requiresProfile: !user.fullName
+        }
+      });
+    } catch (error) {
+      console.error('Verify customer OTP error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'OTP verification failed.'
+      });
+    }
   }
 
   static async forgotPassword(req, res) {
@@ -397,6 +607,54 @@ class AuthController {
       return res.status(400).json({
         success: false,
         message: error.message || 'Password reset failed.'
+      });
+    }
+  }
+
+  static async completeCustomerProfile(req, res) {
+    try {
+      const { fullName, phoneNumber } = req.body;
+      const user = req.user;
+
+      if (user.role !== DEFAULT_CUSTOMER_ROLE) {
+        return res.status(403).json({
+          success: false,
+          message: 'Only customers can update this profile.'
+        });
+      }
+
+      const normalizedName = normalizeName(fullName);
+      if (!normalizedName || normalizedName.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name is required.'
+        });
+      }
+
+      const normalizedPhone = phoneNumber ? String(phoneNumber).trim() : null;
+
+      await user.update({
+        fullName: normalizedName,
+        phoneNumber: normalizedPhone || null
+      });
+
+      return res.json({
+        success: true,
+        message: 'Profile updated successfully.',
+        data: {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+          isVerified: user.isVerified
+        }
+      });
+    } catch (error) {
+      console.error('Complete profile error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update profile.'
       });
     }
   }
@@ -493,6 +751,7 @@ class AuthController {
           id: user.id,
           fullName: user.fullName,
           email: user.email,
+          phoneNumber: user.phoneNumber,
           role: user.role,
           isVerified: user.isVerified,
           lastLogin: user.lastLogin

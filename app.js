@@ -4,7 +4,7 @@ const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const authRoutes = require('./routes/Auth/authRoutes');
-const { generalLimiter } = require('./middleware/RateLimiter');
+const addressRoutes = require('./routes/User/addressRoutes');
 
 const app = express();
 
@@ -22,8 +22,6 @@ const corsOptions = allowedOrigins.length === 0 || allowedOrigins.includes('*')
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(generalLimiter);
-
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
@@ -33,6 +31,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/user', addressRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use((req, res) => {

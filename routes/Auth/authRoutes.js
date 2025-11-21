@@ -97,6 +97,9 @@ router.post('/register', registerLimiter, AuthController.registerCustomer);
  */
 router.post('/register/customer', registerLimiter, AuthController.registerCustomer);
 
+router.post('/customer/otp/send', otpLimiter, AuthController.sendCustomerOTP);
+router.post('/customer/otp/verify', otpLimiter, AuthController.verifyCustomerOTP);
+
 /**
  * @swagger
  * /api/v1/auth/register/partner:
@@ -350,5 +353,6 @@ router.post('/logout', AuthMiddleware.authenticate, AuthController.logout);
  *         description: Returns the authenticated user profile.
  */
 router.get('/me', AuthMiddleware.authenticate, AuthController.getProfile);
+router.put('/customer/profile', AuthMiddleware.authenticate, AuthController.completeCustomerProfile);
 
 module.exports = router;
