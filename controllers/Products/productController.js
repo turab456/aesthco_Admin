@@ -121,6 +121,61 @@ class ProductController {
     try {
       const { name, slug, shortDescription, description, gender, categoryId, collectionId, isActive = true, variants = [], images = [] } = req.body;
 
+      // Validation
+      const errors = [];
+      
+      if (!name || !name.trim()) {
+        errors.push('Product name is required.');
+      }
+      if (!slug || !slug.trim()) {
+        errors.push('Product slug is required.');
+      }
+      if (!shortDescription || !shortDescription.trim()) {
+        errors.push('Short description is required.');
+      }
+      if (!description || !description.trim()) {
+        errors.push('Product description is required.');
+      }
+      if (!gender) {
+        errors.push('Gender is required.');
+      }
+      if (!categoryId) {
+        errors.push('Category is required.');
+      }
+      if (!images || images.length === 0) {
+        errors.push('At least one image is required.');
+      }
+      if (!variants || variants.length === 0) {
+        errors.push('At least one variant is required.');
+      }
+
+      // Validate variants
+      if (variants && variants.length > 0) {
+        for (let i = 0; i < variants.length; i++) {
+          const v = variants[i];
+          if (!v.colorId) {
+            errors.push(`Variant ${i + 1}: Color is required.`);
+          }
+          if (!v.sizeId) {
+            errors.push(`Variant ${i + 1}: Size is required.`);
+          }
+          if (!v.sku || !v.sku.trim()) {
+            errors.push(`Variant ${i + 1}: SKU is required.`);
+          }
+          if (v.stockQuantity === undefined || v.stockQuantity === null || v.stockQuantity === '') {
+            errors.push(`Variant ${i + 1}: Stock quantity is required.`);
+          }
+          if (v.basePrice === undefined || v.basePrice === null || v.basePrice === '') {
+            errors.push(`Variant ${i + 1}: Base price is required.`);
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: errors.join(' ') });
+      }
+
       const product = await Product.create(
         {
           name,
@@ -190,7 +245,62 @@ class ProductController {
     const t = await Category.sequelize.transaction();
     try {
       const { id } = req.params;
-      const { name, slug, shortDescription, description, gender, categoryId, collectionId, isActive } = req.body;
+      const { name, slug, shortDescription, description, gender, categoryId, collectionId, isActive, variants = [], images = [] } = req.body;
+
+      // Validation
+      const errors = [];
+      
+      if (!name || !name.trim()) {
+        errors.push('Product name is required.');
+      }
+      if (!slug || !slug.trim()) {
+        errors.push('Product slug is required.');
+      }
+      if (!shortDescription || !shortDescription.trim()) {
+        errors.push('Short description is required.');
+      }
+      if (!description || !description.trim()) {
+        errors.push('Product description is required.');
+      }
+      if (!gender) {
+        errors.push('Gender is required.');
+      }
+      if (!categoryId) {
+        errors.push('Category is required.');
+      }
+      if (!images || images.length === 0) {
+        errors.push('At least one image is required.');
+      }
+      if (!variants || variants.length === 0) {
+        errors.push('At least one variant is required.');
+      }
+
+      // Validate variants
+      if (variants && variants.length > 0) {
+        for (let i = 0; i < variants.length; i++) {
+          const v = variants[i];
+          if (!v.colorId) {
+            errors.push(`Variant ${i + 1}: Color is required.`);
+          }
+          if (!v.sizeId) {
+            errors.push(`Variant ${i + 1}: Size is required.`);
+          }
+          if (!v.sku || !v.sku.trim()) {
+            errors.push(`Variant ${i + 1}: SKU is required.`);
+          }
+          if (v.stockQuantity === undefined || v.stockQuantity === null || v.stockQuantity === '') {
+            errors.push(`Variant ${i + 1}: Stock quantity is required.`);
+          }
+          if (v.basePrice === undefined || v.basePrice === null || v.basePrice === '') {
+            errors.push(`Variant ${i + 1}: Base price is required.`);
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: errors.join(' ') });
+      }
 
       const product = await Product.findByPk(id);
       if (!product) {
@@ -211,6 +321,105 @@ class ProductController {
         },
         { transaction: t }
       );
+
+      // Handle variants update
+      if (variants && variants.length > 0) {
+        // Get existing variants
+        const existingVariants = await ProductVariant.findAll({
+          where: { productId: id },
+          transaction: t
+        });
+
+        // Delete variants that are not in the new list
+        const newVariantIds = variants.filter(v => v.id).map(v => v.id);
+        for (const existingVariant of existingVariants) {
+          if (!newVariantIds.includes(existingVariant.id)) {
+            await existingVariant.destroy({ transaction: t });
+          }
+        }
+
+        // Create or update variants
+        for (const variant of variants) {
+          if (variant.id) {
+            // Update existing variant
+            await ProductVariant.update(
+              {
+                colorId: variant.colorId,
+                sizeId: variant.sizeId,
+                sku: variant.sku,
+                stockQuantity: variant.stockQuantity,
+                basePrice: variant.basePrice,
+                salePrice: variant.salePrice || null,
+                isAvailable: variant.isAvailable ?? true
+              },
+              {
+                where: { id: variant.id, productId: id },
+                transaction: t
+              }
+            );
+          } else {
+            // Create new variant
+            await ProductVariant.create(
+              {
+                productId: id,
+                colorId: variant.colorId,
+                sizeId: variant.sizeId,
+                sku: variant.sku,
+                stockQuantity: variant.stockQuantity,
+                basePrice: variant.basePrice,
+                salePrice: variant.salePrice || null,
+                isAvailable: variant.isAvailable ?? true
+              },
+              { transaction: t }
+            );
+          }
+        }
+      }
+
+      // Handle images update
+      if (images && images.length > 0) {
+        // Get existing images
+        const existingImages = await ProductImage.findAll({
+          where: { productId: id },
+          transaction: t
+        });
+
+        // Delete images that are not in the new list
+        const newImageIds = images.filter(img => img.id).map(img => img.id);
+        for (const existingImage of existingImages) {
+          if (!newImageIds.includes(existingImage.id)) {
+            await existingImage.destroy({ transaction: t });
+          }
+        }
+
+        // Create or update images
+        for (const [idx, img] of images.entries()) {
+          if (img.id) {
+            // Update existing image
+            await ProductImage.update(
+              {
+                isPrimary: img.isPrimary ?? false,
+                sortOrder: typeof img.sortOrder === 'number' ? img.sortOrder : idx
+              },
+              {
+                where: { id: img.id, productId: id },
+                transaction: t
+              }
+            );
+          } else if (img.imageUrl) {
+            // Create new image (only if imageUrl is provided)
+            await ProductImage.create(
+              {
+                productId: id,
+                imageUrl: img.imageUrl,
+                isPrimary: img.isPrimary ?? false,
+                sortOrder: typeof img.sortOrder === 'number' ? img.sortOrder : idx
+              },
+              { transaction: t }
+            );
+          }
+        }
+      }
 
       await t.commit();
       const updated = await Product.findByPk(id, {

@@ -174,7 +174,10 @@ class MasterController {
   // Sizes
   static async listSizes(_req, res) {
     try {
-      const sizes = await Size.findAll({ order: [['sortOrder', 'ASC']], attributes: { include: ['label'] } });
+      const sizes = await Size.findAll({
+        order: [['label', 'ASC']],
+        attributes: { include: ['label'] },
+      });
       return res.json({ success: true, data: sizes });
     } catch (error) {
       console.error('List sizes error:', error);
