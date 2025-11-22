@@ -3,9 +3,9 @@ const { DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   const ProductVariant = sequelize.define('ProductVariant', {
     id: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       primaryKey: true,
-      defaultValue: DataTypes.UUIDV4
+      autoIncrement: true
     },
     productId: {
       type: DataTypes.INTEGER,
@@ -52,6 +52,7 @@ module.exports = (sequelize) => {
     }
   }, {
     tableName: 'ProductVariants',
+    schema: 'catalog',
     indexes: [
       { unique: true, fields: ['productId', 'colorId', 'sizeId'] }
     ]

@@ -45,6 +45,7 @@ module.exports = (sequelize) => {
     }
   }, {
     tableName: 'Products',
+    schema: 'catalog',
     underscored: false
   });
 

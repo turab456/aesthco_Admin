@@ -26,6 +26,7 @@ module.exports = (sequelize) => {
     }
   }, {
     tableName: 'ProductImages',
+    schema: 'catalog',
     indexes: [
       { fields: ['productId', 'isPrimary'] }
     ]

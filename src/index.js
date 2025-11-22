@@ -8,6 +8,9 @@ const SHUTDOWN_DELAY_MS = 500;
 async function startServer() {
   try {
     await sequelize.authenticate();
+    // Ensure custom schemas for product masters and catalog
+    await sequelize.createSchema('masters', { logging: false }).catch(() => {});
+    await sequelize.createSchema('catalog', { logging: false }).catch(() => {});
     await sequelize.sync();
 
     const server = app.listen(PORT, () => {

@@ -124,7 +124,35 @@ router.post('/register/partner', registerLimiter, AuthController.registerPartner
  * /api/v1/auth/register/super-admin:
  *   post:
  *     summary: Create a super admin account
+ *     description: Requires the admin registration secret via header `x-admin-secret` or body `adminSecret`.
  *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fullName
+ *               - email
+ *               - password
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               adminSecret:
+ *                 type: string
+ *                 description: Admin registration secret (or send via header `x-admin-secret`)
+ *     responses:
+ *       201:
+ *         description: Super admin created
+ *       403:
+ *         description: Invalid admin secret
  */
 router.post('/register/super-admin', registerLimiter, AuthController.registerSuperAdmin);
 

@@ -18,6 +18,7 @@ module.exports = (sequelize) => {
     }
   }, {
     tableName: 'Collections',
+    schema: 'masters',
     indexes: [
       { unique: true, fields: ['slug'] }
     ]
