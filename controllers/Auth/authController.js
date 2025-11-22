@@ -14,9 +14,49 @@ const DEFAULT_CUSTOMER_ROLE = ROLE.CUSTOMER || 'customer';
 const PARTNER_ROLE = ROLE.PARTNER || 'partner';
 const SUPER_ADMIN_ROLE = ROLE.SUPER_ADMIN || 'super-admin';
 
+const ROLE_TOKEN_KEYS = {
+  [DEFAULT_CUSTOMER_ROLE]: {
+    accessKey: 'accessToken',
+    refreshKey: 'refreshToken'
+  },
+  [PARTNER_ROLE]: {
+    accessKey: 'partner_auth_token',
+    refreshKey: 'partner_refresh_token'
+  },
+  [SUPER_ADMIN_ROLE]: {
+    accessKey: 'admin_auth_token',
+    refreshKey: 'admin_refresh_token'
+  },
+  default: {
+    accessKey: 'accessToken',
+    refreshKey: 'refreshToken'
+  }
+};
+
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
 const normalizeName = (name = '') => name.trim();
 const getFirstName = (fullName = '') => normalizeName(fullName).split(' ')[0] || 'there';
+
+const buildRoleTokenPayload = (role, { accessToken = null, refreshToken = null }) => {
+  const mapping = ROLE_TOKEN_KEYS[role] || ROLE_TOKEN_KEYS.default;
+  const payload = {};
+
+  if (accessToken) {
+    payload.accessToken = accessToken;
+    if (mapping.accessKey && mapping.accessKey !== 'accessToken') {
+      payload[mapping.accessKey] = accessToken;
+    }
+  }
+
+  if (refreshToken) {
+    payload.refreshToken = refreshToken;
+    if (mapping.refreshKey && mapping.refreshKey !== 'refreshToken') {
+      payload[mapping.refreshKey] = refreshToken;
+    }
+  }
+
+  return payload;
+};
 
 const sendVerificationOTP = async (user) => {
   const otpRecord = await EmailOTP.createOTP(user.email, OTP_TYPES.EMAIL_VERIFICATION);
@@ -374,6 +414,8 @@ class AuthController {
         req.get('User-Agent') || 'Unknown Device'
       );
 
+      const tokenPayload = buildRoleTokenPayload(user.role, { accessToken, refreshToken });
+
       return res.json({
         success: true,
         message: 'Login successful.',
@@ -385,8 +427,7 @@ class AuthController {
             role: user.role,
             isVerified: user.isVerified
           },
-          accessToken,
-          refreshToken
+          ...tokenPayload
         }
       });
     } catch (error) {
@@ -497,6 +538,8 @@ class AuthController {
         req.get('User-Agent') || 'Unknown Device'
       );
 
+      const tokenPayload = buildRoleTokenPayload(user.role, { accessToken, refreshToken });
+
       return res.json({
         success: true,
         message: 'OTP verified successfully.',
@@ -509,8 +552,7 @@ class AuthController {
             role: user.role,
             isVerified: user.isVerified
           },
-          accessToken,
-          refreshToken,
+          ...tokenPayload,
           requiresProfile: !user.fullName
         }
       });
@@ -702,10 +744,12 @@ class AuthController {
         role: user.role
       });
 
+      const tokenPayload = buildRoleTokenPayload(user.role, { accessToken: newAccessToken });
+
       return res.json({
         success: true,
         data: {
-          accessToken: newAccessToken
+          ...tokenPayload
         }
       });
     } catch (error) {
