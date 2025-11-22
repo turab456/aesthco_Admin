@@ -1,14 +1,21 @@
-# Aesthco Backend
+## Backend Environment Setup
 
-Simple Express server for the Aesthco project.
+| Script           | Description                                                   | Environment file |
+| ---------------- | ------------------------------------------------------------- | ---------------- |
+| `npm run local`  | Runs the API with your local Postgres instance.               | `.env.local`     |
+| `npm run dev`    | Runs the API against the hosted dev/Supabase DB.              | `.env.dev`       |
+| `npm run prod`   | Runs the API with production configuration (placeholders).    | `.env.prod`      |
 
-## Setup
+### Quick Start
 
 ```bash
 cd backend
-cp .env.example .env
 npm install
-npm run dev
+
+# choose one
+npm run local    # local Postgres
+npm run dev      # Supabase dev
+npm run prod     # production config
 ```
 
-The server listens on `PORT` (default `4000`) and exposes `GET /health`.
+Each environment file contains the required variables (database, JWT, email, Cloudinary). Update `.env.prod` with real production credentials before deploying.***
