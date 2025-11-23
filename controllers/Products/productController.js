@@ -54,7 +54,28 @@ const serializeProduct = (product) => ({
 class ProductController {
   static async list(req, res) {
     try {
+      const { categoryId, collectionId, colorId, sizeId, minPrice, maxPrice, sort } = req.query;
+
+      const where = {};
+      if (categoryId) where.categoryId = categoryId;
+      if (collectionId) where.collectionId = collectionId;
+
+      const variantWhere = {};
+      if (colorId) variantWhere.colorId = colorId;
+      if (sizeId) variantWhere.sizeId = sizeId;
+      if (minPrice || maxPrice) {
+        variantWhere.basePrice = {};
+        if (minPrice) variantWhere.basePrice[Op.gte] = Number(minPrice);
+        if (maxPrice) variantWhere.basePrice[Op.lte] = Number(maxPrice);
+      }
+
+      const order = [];
+      if (sort === 'price_asc') order.push([{ model: ProductVariant, as: 'variants' }, 'basePrice', 'ASC']);
+      else if (sort === 'price_desc') order.push([{ model: ProductVariant, as: 'variants' }, 'basePrice', 'DESC']);
+      else order.push(['createdAt', 'DESC']);
+
       const products = await Product.findAll({
+        where,
         include: [
           { model: Category, as: 'category' },
           { model: Collection, as: 'collection' },
@@ -62,13 +83,15 @@ class ProductController {
           {
             model: ProductVariant,
             as: 'variants',
+            where: Object.keys(variantWhere).length ? variantWhere : undefined,
+            required: !!(colorId || sizeId || minPrice || maxPrice),
             include: [
               { model: Color, as: 'color' },
               { model: Size, as: 'size' }
             ]
           }
         ],
-        order: [['createdAt', 'DESC']]
+        order
       });
 
       return res.json({
@@ -84,9 +107,13 @@ class ProductController {
   static async get(req, res) {
     try {
       const { idOrSlug } = req.params;
+      const orConditions = [{ slug: idOrSlug }];
+      if (/^\d+$/.test(idOrSlug)) {
+        orConditions.push({ id: Number(idOrSlug) });
+      }
       const product = await Product.findOne({
         where: {
-          [Op.or]: [{ id: idOrSlug }, { slug: idOrSlug }]
+          [Op.or]: orConditions
         },
         include: [
           { model: Category, as: 'category' },
