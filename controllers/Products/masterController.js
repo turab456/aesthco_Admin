@@ -175,8 +175,11 @@ class MasterController {
   static async listSizes(_req, res) {
     try {
       const sizes = await Size.findAll({
-        order: [['label', 'ASC']],
-        attributes: { include: ['label'] },
+        order: [
+          ['sortOrder', 'ASC'],
+          ['label', 'ASC'],
+        ],
+        attributes: { include: ['label', 'sortOrder'] },
       });
       return res.json({ success: true, data: sizes });
     } catch (error) {
@@ -188,6 +191,12 @@ class MasterController {
   static async createSize(req, res) {
     if (!assertAdmin(req, res)) return;
     try {
+      if (req.body.sortOrder != null) {
+        const existing = await Size.findOne({ where: { sortOrder: req.body.sortOrder } });
+        if (existing) {
+          return res.status(400).json({ success: false, message: 'Sort order must be unique across sizes.' });
+        }
+      }
       const size = await Size.create(req.body);
       return res.status(201).json({ success: true, message: 'Size created.', data: size });
     } catch (error) {
@@ -203,6 +212,12 @@ class MasterController {
       const size = await Size.findByPk(id);
       if (!size) {
         return res.status(404).json({ success: false, message: 'Size not found.' });
+      }
+      if (req.body.sortOrder != null) {
+        const existing = await Size.findOne({ where: { sortOrder: req.body.sortOrder } });
+        if (existing && existing.id !== Number(id)) {
+          return res.status(400).json({ success: false, message: 'Sort order must be unique across sizes.' });
+        }
       }
       await size.update(req.body);
       return res.json({ success: true, message: 'Size updated.', data: size });

@@ -13,6 +13,18 @@ async function startServer() {
     await sequelize.createSchema('catalog', { logging: false }).catch(() => {});
     await sequelize.sync({ alter: true });
 
+    // Ensure size sort order column and unique index (masters.Sizes)
+    try {
+      await sequelize.query(
+        'ALTER TABLE "masters"."Sizes" ADD COLUMN IF NOT EXISTS "sortOrder" INTEGER;'
+      );
+      await sequelize.query(
+        'CREATE UNIQUE INDEX IF NOT EXISTS "Sizes_sortOrder_idx" ON "masters"."Sizes" ("sortOrder") WHERE "sortOrder" IS NOT NULL;'
+      );
+    } catch (sizeIndexError) {
+      console.error('Failed to ensure sortOrder on Sizes:', sizeIndexError);
+    }
+
     // Ensure new variant flag exists (idempotent)
     try {
       await sequelize.query(

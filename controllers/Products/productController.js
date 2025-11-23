@@ -48,7 +48,7 @@ const serializeProduct = (product) => ({
     isAvailable: v.isAvailable,
     showInListing: typeof v.showInListing === 'boolean' ? v.showInListing : true,
     color: v.color ? { id: v.color.id, name: v.color.name, code: v.color.code, hexCode: v.color.hexCode } : null,
-    size: v.size ? { id: v.size.id, code: v.size.code, label: v.size.label } : null
+    size: v.size ? { id: v.size.id, code: v.size.code, label: v.size.label, sortOrder: v.size.sortOrder } : null
   })) || []
 });
 
