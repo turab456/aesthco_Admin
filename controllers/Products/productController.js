@@ -93,10 +93,17 @@ const serializeVariantCard = (product, variant) => {
     cardId: `${product.id}-${variant.id}`,
     productId: product.id,
     productSlug: product.slug,
+    categoryId: product.categoryId,
+    category: product.category
+      ? { id: product.category.id, name: product.category.name, slug: product.category.slug }
+      : null,
     variantId: variant.id,
     name: product.name,
     color: variant.color
       ? { id: variant.color.id, name: variant.color.name, code: variant.color.code, hexCode: variant.color.hexCode }
+      : null,
+    size: variant.size
+      ? { id: variant.size.id, code: variant.size.code, label: variant.size.label }
       : null,
     basePrice,
     salePrice,
@@ -114,17 +121,36 @@ class ProductController {
       const { categoryId, collectionId, colorId, sizeId, minPrice, maxPrice, sort, listByVariant, view } = req.query;
       const listVariants = listByVariant === 'true' || listByVariant === '1' || view === 'variant';
 
+      const normalizeIds = (input) => {
+        if (input === undefined || input === null) return [];
+        if (Array.isArray(input)) return input.filter(Boolean).map((v) => Number(v));
+        return String(input)
+          .split(',')
+          .map((v) => v.trim())
+          .filter(Boolean)
+          .map((v) => Number(v));
+      };
+
+      const colorIds = normalizeIds(colorId);
+      const sizeIds = normalizeIds(sizeId);
+
       const where = {};
       if (categoryId) where.categoryId = categoryId;
       if (collectionId) where.collectionId = collectionId;
 
       const variantWhere = {};
-      if (colorId) variantWhere.colorId = colorId;
-      if (sizeId) variantWhere.sizeId = sizeId;
+      if (colorIds.length === 1) variantWhere.colorId = colorIds[0];
+      else if (colorIds.length > 1) variantWhere.colorId = { [Op.in]: colorIds };
+      if (sizeIds.length === 1) variantWhere.sizeId = sizeIds[0];
+      else if (sizeIds.length > 1) variantWhere.sizeId = { [Op.in]: sizeIds };
       if (minPrice || maxPrice) {
         variantWhere.basePrice = {};
         if (minPrice) variantWhere.basePrice[Op.gte] = Number(minPrice);
         if (maxPrice) variantWhere.basePrice[Op.lte] = Number(maxPrice);
+      }
+      if (listVariants) {
+        variantWhere.stockQuantity = { ...(variantWhere.stockQuantity || {}), [Op.gt]: 0 };
+        variantWhere.isAvailable = true;
       }
 
       const order = [];
@@ -142,7 +168,7 @@ class ProductController {
             model: ProductVariant,
             as: 'variants',
             where: Object.keys(variantWhere).length ? variantWhere : undefined,
-            required: !!(colorId || sizeId || minPrice || maxPrice),
+            required: listVariants || !!(colorIds.length || sizeIds.length || minPrice || maxPrice),
             include: [
               { model: Color, as: 'color' },
               { model: Size, as: 'size' }
