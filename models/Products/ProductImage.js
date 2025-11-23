@@ -11,6 +11,10 @@ module.exports = (sequelize) => {
       type: DataTypes.INTEGER,
       allowNull: false
     },
+    colorId: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
     imageUrl: {
       type: DataTypes.STRING,
       allowNull: false
@@ -36,6 +40,10 @@ module.exports = (sequelize) => {
     ProductImage.belongsTo(models.Product, {
       foreignKey: 'productId',
       as: 'product'
+    });
+    ProductImage.belongsTo(models.Color, {
+      foreignKey: 'colorId',
+      as: 'color'
     });
   };
 

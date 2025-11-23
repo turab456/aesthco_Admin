@@ -34,7 +34,10 @@ const serializeProduct = (product) => ({
     id: img.id,
     imageUrl: img.imageUrl,
     isPrimary: img.isPrimary,
-    sortOrder: img.sortOrder
+    sortOrder: img.sortOrder,
+    color: img.color
+      ? { id: img.color.id, name: img.color.name, code: img.color.code, hexCode: img.color.hexCode }
+      : null
   })) || [],
   variants: product.variants?.map((v) => ({
     id: v.id,
@@ -55,7 +58,7 @@ class ProductController {
         include: [
           { model: Category, as: 'category' },
           { model: Collection, as: 'collection' },
-          { model: ProductImage, as: 'images', separate: true, order: [['isPrimary', 'DESC'], ['sortOrder', 'ASC']] },
+          { model: ProductImage, as: 'images', separate: true, order: [['isPrimary', 'DESC'], ['sortOrder', 'ASC']], include: [{ model: Color, as: 'color' }] },
           {
             model: ProductVariant,
             as: 'variants',
@@ -88,7 +91,7 @@ class ProductController {
         include: [
           { model: Category, as: 'category' },
           { model: Collection, as: 'collection' },
-          { model: ProductImage, as: 'images', separate: true, order: [['isPrimary', 'DESC'], ['sortOrder', 'ASC']] },
+          { model: ProductImage, as: 'images', separate: true, order: [['isPrimary', 'DESC'], ['sortOrder', 'ASC']], include: [{ model: Color, as: 'color' }] },
           {
             model: ProductVariant,
             as: 'variants',
@@ -212,7 +215,8 @@ class ProductController {
             productId: product.id,
             imageUrl: img.imageUrl,
             isPrimary: img.isPrimary ?? idx === 0,
-            sortOrder: typeof img.sortOrder === 'number' ? img.sortOrder : idx
+            sortOrder: typeof img.sortOrder === 'number' ? img.sortOrder : idx,
+            colorId: img.colorId || null
           },
           { transaction: t }
         );
@@ -223,7 +227,7 @@ class ProductController {
         include: [
           { model: Category, as: 'category' },
           { model: Collection, as: 'collection' },
-          { model: ProductImage, as: 'images' },
+          { model: ProductImage, as: 'images', include: [{ model: Color, as: 'color' }] },
           { model: ProductVariant, as: 'variants', include: [{ model: Color, as: 'color' }, { model: Size, as: 'size' }] }
         ]
       });
@@ -399,7 +403,8 @@ class ProductController {
             await ProductImage.update(
               {
                 isPrimary: img.isPrimary ?? false,
-                sortOrder: typeof img.sortOrder === 'number' ? img.sortOrder : idx
+                sortOrder: typeof img.sortOrder === 'number' ? img.sortOrder : idx,
+                colorId: img.colorId || null
               },
               {
                 where: { id: img.id, productId: id },
@@ -413,7 +418,8 @@ class ProductController {
                 productId: id,
                 imageUrl: img.imageUrl,
                 isPrimary: img.isPrimary ?? false,
-                sortOrder: typeof img.sortOrder === 'number' ? img.sortOrder : idx
+                sortOrder: typeof img.sortOrder === 'number' ? img.sortOrder : idx,
+                colorId: img.colorId || null
               },
               { transaction: t }
             );
@@ -426,7 +432,7 @@ class ProductController {
         include: [
           { model: Category, as: 'category' },
           { model: Collection, as: 'collection' },
-          { model: ProductImage, as: 'images' },
+          { model: ProductImage, as: 'images', include: [{ model: Color, as: 'color' }] },
           { model: ProductVariant, as: 'variants', include: [{ model: Color, as: 'color' }, { model: Size, as: 'size' }] }
         ]
       });

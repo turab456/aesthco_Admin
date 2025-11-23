@@ -11,7 +11,7 @@ async function startServer() {
     // Ensure custom schemas for product masters and catalog
     await sequelize.createSchema('masters', { logging: false }).catch(() => {});
     await sequelize.createSchema('catalog', { logging: false }).catch(() => {});
-    await sequelize.sync();
+    await sequelize.sync({ alter: true });
 
     const server = app.listen(PORT, () => {
       console.log(`Aesthco Auth API listening on http://localhost:${PORT}`);
