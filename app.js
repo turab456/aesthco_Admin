@@ -5,6 +5,8 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const authRoutes = require('./routes/Auth/authRoutes');
 const addressRoutes = require('./routes/User/addressRoutes');
+const cartRoutes = require('./routes/User/cartRoutes');
+const wishlistRoutes = require('./routes/User/wishlistRoutes');
 const productRoutes = require('./routes/Products/productRoutes');
 const masterRoutes = require('./routes/Products/masterRoutes');
 
@@ -24,16 +26,20 @@ const corsOptions = allowedOrigins.length === 0 || allowedOrigins.includes('*')
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.get('/health', (_req, res) => {
+
+app.get('/', (_req, res) => {
   res.json({
+    service: 'aesthco-backend-api',
     status: 'ok',
-    service: 'aesthco-auth',
-    timestamp: new Date().toISOString()
+    version: process.env.npm_package_version || 'dev'
   });
 });
 
+
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/user', addressRoutes);
+app.use('/api/v1/user', cartRoutes);
+app.use('/api/v1/user', wishlistRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/masters', masterRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
