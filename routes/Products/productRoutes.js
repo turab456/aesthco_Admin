@@ -50,6 +50,7 @@ const router = express.Router();
  *         basePrice: { type: number }
  *         salePrice: { type: number }
  *         isAvailable: { type: boolean }
+ *         showInListing: { type: boolean }
  *     ProductImageInput:
  *       type: object
  *       required: [imageUrl]
@@ -82,6 +83,7 @@ const router = express.Router();
  *                   id: { type: integer }
  *                   color: { $ref: '#/components/schemas/Color' }
  *                   size: { $ref: '#/components/schemas/Size' }
+ *                   showInListing: { type: boolean }
  *     ProductCreateRequest:
  *       type: object
  *       required: [name, slug, shortDescription, description, gender, categoryId]

@@ -46,15 +46,73 @@ const serializeProduct = (product) => ({
     basePrice: Number(v.basePrice),
     salePrice: v.salePrice ? Number(v.salePrice) : null,
     isAvailable: v.isAvailable,
+    showInListing: typeof v.showInListing === 'boolean' ? v.showInListing : true,
     color: v.color ? { id: v.color.id, name: v.color.name, code: v.color.code, hexCode: v.color.hexCode } : null,
     size: v.size ? { id: v.size.id, code: v.size.code, label: v.size.label } : null
   })) || []
 });
 
+const shouldShowVariantInListing = (variant) => {
+  if (typeof variant.showInListing === 'boolean') {
+    return variant.showInListing;
+  }
+  const qty = variant.stockQuantity ?? 0;
+  return Boolean(variant.isAvailable) && qty > 0;
+};
+
+const selectVariantImages = (product, variant) => {
+  const allImages = Array.isArray(product.images) ? product.images : [];
+  const colorImages = variant.colorId
+    ? allImages.filter((img) => img.colorId === variant.colorId)
+    : [];
+
+  const primary =
+    colorImages.find((img) => img.isPrimary) ||
+    colorImages[0] ||
+    allImages.find((img) => img.isPrimary) ||
+    allImages[0] ||
+    null;
+
+  const hover =
+    colorImages.length > 1
+      ? colorImages[1]
+      : allImages.find((img) => img.id !== primary?.id) || primary || null;
+
+  return {
+    primaryUrl: primary?.imageUrl || null,
+    hoverUrl: hover?.imageUrl || null
+  };
+};
+
+const serializeVariantCard = (product, variant) => {
+  const { primaryUrl, hoverUrl } = selectVariantImages(product, variant);
+  const basePrice = Number(variant.basePrice);
+  const salePrice = variant.salePrice ? Number(variant.salePrice) : null;
+
+  return {
+    cardId: `${product.id}-${variant.id}`,
+    productId: product.id,
+    productSlug: product.slug,
+    variantId: variant.id,
+    name: product.name,
+    color: variant.color
+      ? { id: variant.color.id, name: variant.color.name, code: variant.color.code, hexCode: variant.color.hexCode }
+      : null,
+    basePrice,
+    salePrice,
+    imageUrl: primaryUrl,
+    hoverImageUrl: hoverUrl,
+    isAvailable: variant.isAvailable,
+    productIsActive: product.isActive,
+    showInListing: typeof variant.showInListing === 'boolean' ? variant.showInListing : true
+  };
+};
+
 class ProductController {
   static async list(req, res) {
     try {
-      const { categoryId, collectionId, colorId, sizeId, minPrice, maxPrice, sort } = req.query;
+      const { categoryId, collectionId, colorId, sizeId, minPrice, maxPrice, sort, listByVariant, view } = req.query;
+      const listVariants = listByVariant === 'true' || listByVariant === '1' || view === 'variant';
 
       const where = {};
       if (categoryId) where.categoryId = categoryId;
@@ -93,6 +151,22 @@ class ProductController {
         ],
         order
       });
+
+      if (listVariants) {
+        const variantCards = [];
+        for (const product of products) {
+          if (!product.isActive) continue;
+          const variants = Array.isArray(product.variants) ? product.variants : [];
+          for (const variant of variants) {
+            if (!shouldShowVariantInListing(variant)) continue;
+            variantCards.push(serializeVariantCard(product, variant));
+          }
+        }
+        return res.json({
+          success: true,
+          data: variantCards
+        });
+      }
 
       return res.json({
         success: true,
@@ -228,6 +302,7 @@ class ProductController {
             sizeId: variant.sizeId,
             sku: variant.sku,
             stockQuantity: variant.stockQuantity,
+            showInListing: variant.showInListing ?? true,
             basePrice: variant.basePrice,
             salePrice: variant.salePrice || null,
             isAvailable: variant.isAvailable ?? true
@@ -379,6 +454,7 @@ class ProductController {
                 sizeId: variant.sizeId,
                 sku: variant.sku,
                 stockQuantity: variant.stockQuantity,
+                showInListing: variant.showInListing ?? true,
                 basePrice: variant.basePrice,
                 salePrice: variant.salePrice || null,
                 isAvailable: variant.isAvailable ?? true
@@ -397,6 +473,7 @@ class ProductController {
                 sizeId: variant.sizeId,
                 sku: variant.sku,
                 stockQuantity: variant.stockQuantity,
+                showInListing: variant.showInListing ?? true,
                 basePrice: variant.basePrice,
                 salePrice: variant.salePrice || null,
                 isAvailable: variant.isAvailable ?? true
