@@ -25,6 +25,9 @@ const ProductVariant = require('./Products/ProductVariant')(sequelize);
 const ProductImage = require('./Products/ProductImage')(sequelize);
 const Cart = require('./Customer/Cart')(sequelize);
 const Wishlist = require('./Customer/Wishlist')(sequelize);
+const Order = require('./Orders/Order')(sequelize);
+const OrderItem = require('./Orders/OrderItem')(sequelize);
+const ShippingSetting = require('./Orders/ShippingSetting')(sequelize);
 
 // Initialize associations
 const models = {
@@ -40,7 +43,10 @@ const models = {
   ProductVariant,
   ProductImage,
   Cart,
-  Wishlist
+  Wishlist,
+  Order,
+  OrderItem,
+  ShippingSetting
 };
 
 Object.keys(models).forEach(modelName => {
