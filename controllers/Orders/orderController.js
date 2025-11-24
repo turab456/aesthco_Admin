@@ -277,7 +277,14 @@ class OrderController {
     try {
       const orders = await Order.findAll({
         order: [['createdAt', 'DESC']],
-        include: [{ model: OrderItem, as: 'items' }],
+        include: [
+          { model: OrderItem, as: 'items' },
+          {
+            model: User,
+            as: 'assignedPartner',
+            attributes: ['id', 'fullName', 'email', 'phoneNumber'],
+          },
+        ],
       })
       return res.json({ success: true, data: orders })
     } catch (error) {
@@ -289,7 +296,16 @@ class OrderController {
   static async getAdminOrder(req, res) {
     const { id } = req.params
     try {
-      const order = await Order.findByPk(id, { include: [{ model: OrderItem, as: 'items' }] })
+      const order = await Order.findByPk(id, {
+        include: [
+          { model: OrderItem, as: 'items' },
+          {
+            model: User,
+            as: 'assignedPartner',
+            attributes: ['id', 'fullName', 'email', 'phoneNumber'],
+          },
+        ],
+      })
       if (!order) {
         return res.status(404).json({ success: false, message: 'Order not found' })
       }
