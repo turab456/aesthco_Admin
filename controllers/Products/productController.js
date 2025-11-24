@@ -575,6 +575,34 @@ class ProductController {
     }
   }
 
+  static async updateStatus(req, res) {
+    const guard = withRoleGuard(req.user?.role);
+    if (!guard.allowCreateUpdateDelete) {
+      return res.status(403).json({ success: false, message: 'Only super-admin can manage products.' });
+    }
+
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ success: false, message: 'isActive must be a boolean.' });
+      }
+
+      const product = await Product.findByPk(id);
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Product not found.' });
+      }
+
+      await product.update({ isActive });
+
+      return res.json({ success: true, message: `Product ${isActive ? 'activated' : 'deactivated'}.`, data: { id: product.id, isActive: product.isActive } });
+    } catch (error) {
+      console.error('Update product status error:', error);
+      return res.status(500).json({ success: false, message: error.message || 'Failed to update product status.' });
+    }
+  }
+
   static async remove(req, res) {
     const guard = withRoleGuard(req.user?.role);
     if (!guard.allowCreateUpdateDelete) {

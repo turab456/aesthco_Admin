@@ -166,6 +166,32 @@ router.use(AuthMiddleware.authenticate);
 router.post('/', ProductController.create);
 /**
  * @swagger
+ * /api/v1/products/{id}/status:
+ *   patch:
+ *     summary: Update product active status (super-admin only)
+ *     tags: [Products]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               isActive: { type: boolean }
+ *             required: [isActive]
+ *     responses:
+ *       200:
+ *         description: Status updated
+ */
+router.patch('/:id/status', ProductController.updateStatus);
+/**
+ * @swagger
  * /api/v1/products/{id}:
  *   put:
  *     summary: Update product (super-admin only)
