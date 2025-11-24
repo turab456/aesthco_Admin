@@ -55,6 +55,19 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: 0,
       },
+      discountAmount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0,
+      },
+      couponId: {
+        type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      couponCode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       total: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
@@ -103,6 +116,7 @@ module.exports = (sequelize) => {
     Order.belongsTo(models.User, { foreignKey: 'userId', as: 'customer' })
     Order.belongsTo(models.User, { foreignKey: 'assignedPartnerId', as: 'assignedPartner' })
     Order.hasMany(models.OrderItem, { foreignKey: 'orderId', as: 'items', onDelete: 'CASCADE' })
+    Order.belongsTo(models.Coupon, { foreignKey: 'couponId', as: 'coupon' })
   }
 
   Order.STATUSES = ORDER_STATUSES

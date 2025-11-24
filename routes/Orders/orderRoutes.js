@@ -90,6 +90,8 @@ router.use(AuthMiddleware.authenticate)
  *               addressId:
  *                 type: string
  *                 format: uuid
+ *               couponCode:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Order created
@@ -140,6 +142,7 @@ router.get('/', AuthMiddleware.authorize(CUSTOMER), OrderController.listCustomer
  *       200:
  *         description: Order
  */
+router.get('/shipping-settings', AuthMiddleware.authorize(CUSTOMER), OrderController.getShippingSetting)
 router.get('/:id', AuthMiddleware.authorize(CUSTOMER), OrderController.getCustomerOrder)
 
 // Partner routes

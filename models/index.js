@@ -28,6 +28,8 @@ const Wishlist = require('./Customer/Wishlist')(sequelize);
 const Order = require('./Orders/Order')(sequelize);
 const OrderItem = require('./Orders/OrderItem')(sequelize);
 const ShippingSetting = require('./Orders/ShippingSetting')(sequelize);
+const Coupon = require('./Coupons/Coupon')(sequelize);
+const CouponRedemption = require('./Coupons/CouponRedemption')(sequelize);
 
 // Initialize associations
 const models = {
@@ -46,7 +48,9 @@ const models = {
   Wishlist,
   Order,
   OrderItem,
-  ShippingSetting
+  ShippingSetting,
+  Coupon,
+  CouponRedemption
 };
 
 Object.keys(models).forEach(modelName => {

@@ -10,6 +10,7 @@ const wishlistRoutes = require('./routes/User/wishlistRoutes');
 const productRoutes = require('./routes/Products/productRoutes');
 const masterRoutes = require('./routes/Products/masterRoutes');
 const orderRoutes = require('./routes/Orders/orderRoutes');
+const couponRoutes = require('./routes/Coupons/couponRoutes');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/v1/user', wishlistRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/masters', masterRoutes);
 app.use('/api/v1/orders', orderRoutes);
+app.use('/api/v1/coupons', couponRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use((req, res) => {

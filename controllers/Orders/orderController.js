@@ -10,7 +10,9 @@ const {
   Order,
   OrderItem,
   ShippingSetting,
+  CouponRedemption,
 } = require('../../models')
+const CouponService = require('../../services/CouponService')
 
 const DEFAULT_SHIPPING = {
   threshold: 1999,
@@ -59,7 +61,7 @@ const buildShippingLabel = (order, items) => {
 class OrderController {
   static async createFromCart(req, res) {
     const userId = req.user.id
-    const { addressId } = req.body
+    const { addressId, couponCode } = req.body
 
     try {
       if (!addressId) {
@@ -158,16 +160,13 @@ class OrderController {
 
       const subtotal = mappedItems.reduce((sum, item) => sum + item.totalPrice, 0)
       const shippingFee = subtotal >= shippingSetting.threshold ? 0 : shippingSetting.fee
-      const total = subtotal + shippingFee
-
-      const orderPayload = {
+      const orderPayloadBase = {
         userId,
         status: 'PLACED',
         paymentMethod: 'COD',
         paymentStatus: 'pending',
         subtotal,
         shippingFee,
-        total,
         addressName: address.name,
         addressPhone: address.phoneNumber,
         addressLine1: address.addressLine1,
@@ -178,12 +177,51 @@ class OrderController {
       }
 
       const order = await Order.sequelize.transaction(async (t) => {
-        const createdOrder = await Order.create(orderPayload, { transaction: t })
+        let couponData = { coupon: null, discountAmount: 0 }
+        if (couponCode) {
+          couponData = await CouponService.validateCoupon({
+            code: couponCode,
+            user: req.user,
+            email: req.user.email,
+            phone: req.user.phoneNumber,
+            orderAmount: subtotal,
+            transaction: t,
+            lockCoupon: true,
+          })
+        }
+
+        const total = Math.max(0, subtotal + shippingFee - couponData.discountAmount)
+
+        const createdOrder = await Order.create(
+          {
+            ...orderPayloadBase,
+            discountAmount: couponData.discountAmount,
+            couponId: couponData.coupon?.id || null,
+            couponCode: couponData.coupon?.code || null,
+            total,
+          },
+          { transaction: t },
+        )
         const itemsWithOrder = mappedItems.map((i) => ({ ...i, orderId: createdOrder.id }))
         const createdItems = await OrderItem.bulkCreate(itemsWithOrder, { transaction: t, returning: true })
 
         const shippingLabel = buildShippingLabel(createdOrder, createdItems)
         await createdOrder.update({ shippingLabel }, { transaction: t })
+
+        if (couponData.coupon) {
+          await CouponRedemption.create(
+            {
+              couponId: couponData.coupon.id,
+              userId,
+              email: req.user.email,
+              phone: req.user.phoneNumber,
+              orderId: createdOrder.id,
+              discountAmount: couponData.discountAmount,
+              redeemedAt: new Date(),
+            },
+            { transaction: t },
+          )
+        }
 
         await Cart.destroy({ where: { userId }, transaction: t })
 
