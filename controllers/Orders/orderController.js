@@ -1,4 +1,3 @@
-const { Op } = require('sequelize')
 const {
   Cart,
   UserAddress,
@@ -11,6 +10,7 @@ const {
   OrderItem,
   ShippingSetting,
   CouponRedemption,
+  User,
 } = require('../../models')
 const CouponService = require('../../services/CouponService')
 
@@ -301,14 +301,17 @@ class OrderController {
   }
 
   static async listPartnerOrders(req, res) {
-    const partnerId = req.user.id
     try {
       const orders = await Order.findAll({
-        where: {
-          [Op.or]: [{ assignedPartnerId: null }, { assignedPartnerId: partnerId }],
-        },
         order: [['createdAt', 'DESC']],
-        include: [{ model: OrderItem, as: 'items' }],
+        include: [
+          { model: OrderItem, as: 'items' },
+          {
+            model: User,
+            as: 'assignedPartner',
+            attributes: ['id', 'fullName', 'email', 'phoneNumber'],
+          },
+        ],
       })
       return res.json({ success: true, data: orders })
     } catch (error) {
@@ -352,7 +355,18 @@ class OrderController {
         { returning: true },
       )
 
-      return res.json({ success: true, data: order })
+      const reloadedOrder = await order.reload({
+        include: [
+          { model: OrderItem, as: 'items' },
+          {
+            model: User,
+            as: 'assignedPartner',
+            attributes: ['id', 'fullName', 'email', 'phoneNumber'],
+          },
+        ],
+      })
+
+      return res.json({ success: true, data: reloadedOrder })
     } catch (error) {
       console.error('Update order status error:', error)
       return res.status(500).json({ success: false, message: 'Failed to update status' })
@@ -360,11 +374,40 @@ class OrderController {
   }
 
   static async getPartnerOrder(req, res) {
-    const partnerId = req.user.id
     const { id } = req.params
     try {
       const order = await Order.findByPk(id, {
-        include: [{ model: OrderItem, as: 'items' }],
+        include: [
+          { model: OrderItem, as: 'items' },
+          {
+            model: User,
+            as: 'assignedPartner',
+            attributes: ['id', 'fullName', 'email', 'phoneNumber'],
+          },
+        ],
+      })
+
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Order not found' })
+      }
+
+      return res.json({ success: true, data: order })
+    } catch (error) {
+      console.error('Partner get order error:', error)
+      return res.status(500).json({ success: false, message: 'Failed to fetch order' })
+    }
+  }
+
+  static async acceptByPartner(req, res) {
+    const partnerId = req.user.id
+    const { id } = req.params
+
+    try {
+      const order = await Order.findByPk(id, {
+        include: [
+          { model: User, as: 'assignedPartner', attributes: ['id', 'fullName', 'email', 'phoneNumber'] },
+          { model: OrderItem, as: 'items' },
+        ],
       })
 
       if (!order) {
@@ -375,10 +418,20 @@ class OrderController {
         return res.status(403).json({ success: false, message: 'Order is assigned to another partner' })
       }
 
+      if (!order.assignedPartnerId) {
+        await order.update({ assignedPartnerId: partnerId })
+        await order.reload({
+          include: [
+            { model: OrderItem, as: 'items' },
+            { model: User, as: 'assignedPartner', attributes: ['id', 'fullName', 'email', 'phoneNumber'] },
+          ],
+        })
+      }
+
       return res.json({ success: true, data: order })
     } catch (error) {
-      console.error('Partner get order error:', error)
-      return res.status(500).json({ success: false, message: 'Failed to fetch order' })
+      console.error('Accept order error:', error)
+      return res.status(500).json({ success: false, message: 'Failed to accept order' })
     }
   }
 

@@ -177,6 +177,23 @@ router.get('/partner/list', AuthMiddleware.authorize(PARTNER), OrderController.l
 router.get('/partner/:id', AuthMiddleware.authorize(PARTNER), OrderController.getPartnerOrder)
 /**
  * @swagger
+ * /api/v1/orders/partner/{id}/accept:
+ *   patch:
+ *     summary: Accept order (partner)
+ *     tags: [Orders]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: Accepted order
+ */
+router.patch('/partner/:id/accept', AuthMiddleware.authorize(PARTNER), OrderController.acceptByPartner)
+/**
+ * @swagger
  * /api/v1/orders/partner/{id}/status:
  *   patch:
  *     summary: Update order status (partner)
