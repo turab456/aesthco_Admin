@@ -7,6 +7,10 @@ const router = express.Router()
 
 const { SUPER_ADMIN, PARTNER, CUSTOMER } = User.ROLES
 
+// Public: shipping settings for showing free shipping threshold on storefront/contact page
+router.get('/shipping-settings', OrderController.getShippingSetting)
+
+// All routes below require authentication
 router.use(AuthMiddleware.authenticate)
 
 /**
@@ -142,7 +146,6 @@ router.get('/', AuthMiddleware.authorize(CUSTOMER), OrderController.listCustomer
  *       200:
  *         description: Order
  */
-router.get('/shipping-settings', AuthMiddleware.authorize(CUSTOMER), OrderController.getShippingSetting)
 router.get('/:id', AuthMiddleware.authorize(CUSTOMER), OrderController.getCustomerOrder)
 
 // Partner routes

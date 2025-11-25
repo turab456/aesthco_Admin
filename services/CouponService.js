@@ -1,5 +1,5 @@
 const { Op } = require('sequelize')
-const { Coupon, CouponRedemption, Order } = require('../models')
+const { Coupon, CouponRedemption } = require('../models')
 
 class CouponService {
   static normalizeCode(code) {
@@ -63,14 +63,6 @@ class CouponService {
 
     if (coupon.minOrderAmount && numericAmount < Number(coupon.minOrderAmount)) {
       throw new Error(`Minimum order amount for this coupon is ${coupon.minOrderAmount}`)
-    }
-
-    if (coupon.type === 'WELCOME') {
-      if (!user?.id) throw new Error('Welcome coupons are only for signed-in users')
-      const priorOrders = await Order.count({ where: { userId: user.id }, transaction })
-      if (priorOrders > 0) {
-        throw new Error('Welcome coupon can only be used on the first order')
-      }
     }
 
     if (coupon.globalMaxRedemptions) {

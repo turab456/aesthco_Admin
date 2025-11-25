@@ -236,7 +236,9 @@ class CouponController {
   static async listAvailable(req, res) {
     try {
       const now = new Date()
-      const coupons = await Coupon.findAll({
+      const identityFilters = CouponService.buildIdentityFilters(req.user, req.user.email, req.user.phoneNumber)
+
+      const query = {
         where: {
           isActive: true,
           [Op.and]: [
@@ -245,9 +247,57 @@ class CouponController {
           ],
         },
         order: [['createdAt', 'DESC']],
+      }
+
+      if (identityFilters.length) {
+        query.attributes = {
+          include: [[sequelize.fn('COUNT', sequelize.col('redemptions.id')), 'userRedemptions']],
+        }
+        query.include = [
+          {
+            model: CouponRedemption,
+            as: 'redemptions',
+            attributes: [],
+            required: false,
+            where: { [Op.or]: identityFilters },
+          },
+        ]
+        query.group = ['Coupon.id']
+      }
+
+      const coupons = await Coupon.findAll(query)
+
+      // Exclude coupons whose global max redemptions have been reached
+      let globalCounts = new Map()
+      if (coupons.length) {
+        const couponIds = coupons.map((c) => c.id)
+        const redemptionCounts = await CouponRedemption.findAll({
+          attributes: ['couponId', [sequelize.fn('COUNT', sequelize.col('couponId')), 'count']],
+          where: { couponId: couponIds },
+          group: ['couponId'],
+        })
+        globalCounts = new Map(
+          redemptionCounts.map((row) => [row.get('couponId'), Number(row.get('count')) || 0]),
+        )
+      }
+
+      const globallyAvailable = coupons.filter((coupon) => {
+        if (!coupon.globalMaxRedemptions) return true
+        const used = globalCounts.get(coupon.id) || 0
+        return used < coupon.globalMaxRedemptions
       })
 
-      return res.json({ success: true, data: coupons })
+      const filteredCoupons =
+        identityFilters.length === 0
+          ? globallyAvailable
+          : globallyAvailable.filter((coupon) => {
+              const perUserLimit = coupon.perUserLimit ?? 1
+              const usedCount = Number(coupon.get('userRedemptions') || 0)
+              if (!perUserLimit) return true
+              return usedCount < perUserLimit
+            })
+
+      return res.json({ success: true, data: filteredCoupons })
     } catch (error) {
       console.error('List available coupons error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch coupons' })
