@@ -1,5 +1,8 @@
 require('dotenv').config();
 
+const sslEnabled = process.env.DB_SSL === 'true';
+const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true';
+
 module.exports = {
   development: {
     username: process.env.DB_USERNAME || 'postgres',
@@ -10,9 +13,9 @@ module.exports = {
     dialect: 'postgres',
     logging: false, 
     dialectOptions: {
-      ssl: process.env.DB_SSL === 'true' ? {
+      ssl: sslEnabled ? {
         require: true,
-        rejectUnauthorized: false
+        rejectUnauthorized
       } : false
     },
     pool: {
@@ -43,10 +46,10 @@ module.exports = {
     dialect: 'postgres',
     logging: false,
     dialectOptions: {
-      ssl: {
+      ssl: sslEnabled ? {
         require: true,
-        rejectUnauthorized: true
-      }
+        rejectUnauthorized
+      } : false
     }
   }
 };
