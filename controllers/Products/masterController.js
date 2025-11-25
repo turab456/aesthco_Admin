@@ -1,4 +1,39 @@
+const { Op } = require('sequelize');
 const { Color, Size, Category, Collection } = require('../../models');
+
+const HOME_COLLECTION_LIMIT = 2;
+
+const ensureHomeLimit = async (requestedShowOnHome, excludeId) => {
+  if (!requestedShowOnHome) return;
+  const where = { showOnHome: true };
+  if (excludeId) {
+    where.id = { [Op.ne]: excludeId };
+  }
+  const count = await Collection.count({ where });
+  if (count >= HOME_COLLECTION_LIMIT) {
+    const error = new Error(`Only ${HOME_COLLECTION_LIMIT} collections can be shown on home.`);
+    error.status = 400;
+    throw error;
+  }
+};
+
+const ensureHomeOrderUnique = async (requestedShowOnHome, homeOrder, excludeId) => {
+  if (!requestedShowOnHome) return;
+  if (homeOrder === null || homeOrder === undefined) return;
+  const where = {
+    showOnHome: true,
+    homeOrder,
+  };
+  if (excludeId) {
+    where.id = { [Op.ne]: excludeId };
+  }
+  const conflict = await Collection.findOne({ where });
+  if (conflict) {
+    const error = new Error(`Home order ${homeOrder} is already used by another featured collection.`);
+    error.status = 400;
+    throw error;
+  }
+};
 
 const assertAdmin = (req, res) => {
   if (req.user?.role !== 'super-admin') {
@@ -64,9 +99,24 @@ class MasterController {
   }
 
   // Collections
-  static async listCollections(_req, res) {
+  static async listCollections(req, res) {
     try {
-      const collections = await Collection.findAll({ order: [['name', 'ASC']] });
+      const showOnHome = req.query.showOnHome === 'true' || req.query.showOnHome === '1';
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+
+      const order = [
+        [Collection.sequelize.literal('COALESCE("Collection"."homeOrder", 9999)'), 'ASC'],
+        ['name', 'ASC'],
+      ];
+
+      const where = showOnHome ? { showOnHome: true } : undefined;
+
+      const collections = await Collection.findAll({
+        where,
+        order,
+        ...(showOnHome && limit ? { limit } : { limit }),
+      });
+
       return res.json({ success: true, data: collections });
     } catch (error) {
       console.error('List collections error:', error);
@@ -77,11 +127,14 @@ class MasterController {
   static async createCollection(req, res) {
     if (!assertAdmin(req, res)) return;
     try {
+      await ensureHomeLimit(req.body?.showOnHome, null);
+      await ensureHomeOrderUnique(req.body?.showOnHome, req.body?.homeOrder, null);
       const col = await Collection.create(req.body);
       return res.status(201).json({ success: true, message: 'Collection created.', data: col });
     } catch (error) {
       console.error('Create collection error:', error);
-      return res.status(400).json({ success: false, message: error.message || 'Failed to create collection.' });
+      const status = error.status || 400;
+      return res.status(status).json({ success: false, message: error.message || 'Failed to create collection.' });
     }
   }
 
@@ -93,11 +146,16 @@ class MasterController {
       if (!col) {
         return res.status(404).json({ success: false, message: 'Collection not found.' });
       }
+      const nextShowOnHome = typeof req.body?.showOnHome === 'boolean' ? req.body.showOnHome : col.showOnHome;
+      const nextHomeOrder = req.body?.homeOrder !== undefined ? req.body.homeOrder : col.homeOrder;
+      await ensureHomeLimit(nextShowOnHome, col.id);
+      await ensureHomeOrderUnique(nextShowOnHome, nextHomeOrder, col.id);
       await col.update(req.body);
       return res.json({ success: true, message: 'Collection updated.', data: col });
     } catch (error) {
       console.error('Update collection error:', error);
-      return res.status(400).json({ success: false, message: error.message || 'Failed to update collection.' });
+      const status = error.status || 400;
+      return res.status(status).json({ success: false, message: error.message || 'Failed to update collection.' });
     }
   }
 
