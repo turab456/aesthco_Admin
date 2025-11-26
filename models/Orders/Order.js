@@ -117,6 +117,7 @@ module.exports = (sequelize) => {
     Order.belongsTo(models.User, { foreignKey: 'assignedPartnerId', as: 'assignedPartner' })
     Order.hasMany(models.OrderItem, { foreignKey: 'orderId', as: 'items', onDelete: 'CASCADE' })
     Order.belongsTo(models.Coupon, { foreignKey: 'couponId', as: 'coupon' })
+    Order.hasMany(models.Review, { foreignKey: 'orderId', as: 'reviews' })
   }
 
   Order.STATUSES = ORDER_STATUSES

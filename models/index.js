@@ -23,6 +23,7 @@ const Color = require('./Products/Color')(sequelize);
 const Size = require('./Products/Size')(sequelize);
 const ProductVariant = require('./Products/ProductVariant')(sequelize);
 const ProductImage = require('./Products/ProductImage')(sequelize);
+const Review = require('./Products/Reviews')(sequelize);
 const Cart = require('./Customer/Cart')(sequelize);
 const Wishlist = require('./Customer/Wishlist')(sequelize);
 const Order = require('./Orders/Order')(sequelize);
@@ -44,6 +45,7 @@ const models = {
   Size,
   ProductVariant,
   ProductImage,
+  Review,
   Cart,
   Wishlist,
   Order,
