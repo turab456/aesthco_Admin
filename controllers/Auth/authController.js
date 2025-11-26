@@ -109,6 +109,15 @@ const ensureCustomerAccount = async (email, fullName = '') => {
   return { user, isNew };
 };
 
+const sendWelcomeIfNew = async (isNew, user) => {
+  if (!isNew) return;
+  try {
+    await EmailService.sendWelcomeEmail(user.email, getFirstName(user.fullName));
+  } catch (err) {
+    console.error('Welcome email failed:', err?.message || err);
+  }
+};
+
 class AuthController {
   static async register(req, res) {
     try {
@@ -128,6 +137,7 @@ class AuthController {
       if (requestedRole === DEFAULT_CUSTOMER_ROLE) {
         const { user, isNew } = await ensureCustomerAccount(normalizedEmail, normalizedName);
         await sendLoginOTP(user);
+        await sendWelcomeIfNew(isNew, user);
 
         return res.status(isNew ? 201 : 200).json({
           success: true,
@@ -332,6 +342,7 @@ class AuthController {
         try {
           const { user, isNew } = await ensureCustomerAccount(normalizedEmail);
           await sendLoginOTP(user);
+          await sendWelcomeIfNew(isNew, user);
 
           return res.status(200).json({
             success: true,
@@ -466,6 +477,7 @@ class AuthController {
 
       const { user, isNew } = await ensureCustomerAccount(email, fullName);
       await sendLoginOTP(user);
+      await sendWelcomeIfNew(isNew, user);
 
       return res.json({
         success: true,

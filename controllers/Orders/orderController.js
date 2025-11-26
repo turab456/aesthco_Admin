@@ -13,6 +13,7 @@ const {
   User,
 } = require('../../models')
 const CouponService = require('../../services/CouponService')
+const EmailService = require('../../utils/emailService')
 
 const DEFAULT_SHIPPING = {
   threshold: 1999,
@@ -55,6 +56,78 @@ const buildShippingLabel = (order, items) => {
       amount: Number(item.totalPrice),
       sku: item.sku,
     })),
+  }
+}
+
+const mapItemsForEmail = (items = []) =>
+  items.map((item) => ({
+    name: item.productName,
+    variant: [item.colorName, item.sizeName].filter(Boolean).join(' • '),
+    quantity: Number(item.quantity || 0),
+    unitPrice: Number(item.unitPrice || 0),
+    totalPrice: Number(item.totalPrice || 0),
+    imageUrl: item.imageUrl,
+  }))
+
+const sendOrderStatusEmailSafe = async ({ order, status, user, items }) => {
+  try {
+    if (!user?.email) return
+    await EmailService.sendOrderStatusEmail({
+      to: user?.email,
+      status,
+      orderId: order.id,
+      items: mapItemsForEmail(items),
+      summary: {
+        subtotal: order.subtotal,
+        shippingFee: order.shippingFee,
+        discountAmount: order.discountAmount,
+        total: order.total,
+      },
+      customerName: user?.fullName || order.addressName,
+    })
+  } catch (err) {
+    console.error('Order status email failed:', err?.message || err)
+  }
+}
+
+const notifyPartnersNewOrderSafe = async (order, items) => {
+  try {
+    const partners = await User.findAll({
+      where: { role: User.ROLES.PARTNER, isActive: true },
+      attributes: ['email'],
+    })
+    const recipients = partners.filter((p) => p.email)
+    if (!recipients.length) {
+      console.warn('Partner new order email skipped: no active partners with email')
+      return
+    }
+    await Promise.all(
+      recipients.map((partner) =>
+        EmailService.sendPartnerNewOrder(partner.email, order.id, mapItemsForEmail(items), {
+          name: order.addressName,
+          line1: order.addressLine1,
+          line2: order.addressLine2,
+          city: order.city,
+          state: order.state,
+          postalCode: order.postalCode,
+          phone: order.addressPhone,
+        }),
+      ),
+    )
+  } catch (err) {
+    console.error('Partner new order email failed:', err?.message || err)
+  }
+}
+
+const sendPartnerDeliveryOtpSafe = async (order) => {
+  try {
+    if (!order.assignedPartnerId) return
+    const partner = await User.findByPk(order.assignedPartnerId)
+    if (!partner?.email) return
+    const otp = Math.floor(100000 + Math.random() * 900000)
+    await EmailService.sendPartnerDeliveryOTP(partner.email, otp, order.id)
+  } catch (err) {
+    console.error('Partner delivery OTP email failed:', err?.message || err)
   }
 }
 
@@ -231,6 +304,15 @@ class OrderController {
         })
       })
 
+      // Fire-and-forget emails
+      void sendOrderStatusEmailSafe({
+        order,
+        status: 'PLACED',
+        user: req.user,
+        items: order.items || [],
+      })
+      void notifyPartnersNewOrderSafe(order, order.items || [])
+
       return res.status(201).json({ success: true, data: order })
     } catch (error) {
       console.error('Create order error:', error)
@@ -381,6 +463,18 @@ class OrderController {
           },
         ],
       })
+
+      // Fire-and-forget emails
+      const customer = await User.findByPk(reloadedOrder.userId)
+      void sendOrderStatusEmailSafe({
+        order: reloadedOrder,
+        status,
+        user: customer,
+        items: reloadedOrder.items || [],
+      })
+      if (status === 'DELIVERED') {
+        void sendPartnerDeliveryOtpSafe(reloadedOrder)
+      }
 
       return res.json({ success: true, data: reloadedOrder })
     } catch (error) {
