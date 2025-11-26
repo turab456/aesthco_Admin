@@ -131,6 +131,30 @@ const sendPartnerDeliveryOtpSafe = async (order) => {
   }
 }
 
+const sendPartnerCancelSafe = async (order, items) => {
+  try {
+    if (!order.assignedPartnerId) return
+    const partner = await User.findByPk(order.assignedPartnerId)
+    if (!partner?.email) return
+    await EmailService.sendPartnerOrderCancelled(
+      partner.email,
+      order.id,
+      {
+        name: order.addressName,
+        line1: order.addressLine1,
+        line2: order.addressLine2,
+        city: order.city,
+        state: order.state,
+        postalCode: order.postalCode,
+        phone: order.addressPhone,
+      },
+      mapItemsForEmail(items),
+    )
+  } catch (err) {
+    console.error('Partner cancel email failed:', err?.message || err)
+  }
+}
+
 class OrderController {
   static async createFromCart(req, res) {
     const userId = req.user.id
@@ -352,6 +376,41 @@ class OrderController {
     } catch (error) {
       console.error('Get customer order error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch order' })
+    }
+  }
+
+  static async cancelCustomerOrder(req, res) {
+    const userId = req.user.id
+    const { id } = req.params
+    try {
+      const order = await Order.findOne({
+        where: { id, userId },
+        include: [{ model: OrderItem, as: 'items' }],
+      })
+
+      if (!order) {
+        return res.status(404).json({ success: false, message: 'Order not found' })
+      }
+
+      if (['PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'RETURN_REQUESTED', 'RETURNED'].includes(order.status)) {
+        return res.status(400).json({ success: false, message: 'Order cannot be cancelled at this stage.' })
+      }
+
+      await order.update({ status: 'CANCELLED', paymentStatus: 'cancelled' })
+
+      void sendOrderStatusEmailSafe({
+        order,
+        status: 'CANCELLED',
+        user: req.user,
+        items: order.items || [],
+      })
+
+      void sendPartnerCancelSafe(order, order.items || [])
+
+      return res.json({ success: true, data: order })
+    } catch (error) {
+      console.error('Cancel order error:', error)
+      return res.status(500).json({ success: false, message: 'Failed to cancel order' })
     }
   }
 

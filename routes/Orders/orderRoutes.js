@@ -147,6 +147,7 @@ router.get('/', AuthMiddleware.authorize(CUSTOMER), OrderController.listCustomer
  *         description: Order
  */
 router.get('/:id', AuthMiddleware.authorize(CUSTOMER), OrderController.getCustomerOrder)
+router.patch('/:id/cancel', AuthMiddleware.authorize(CUSTOMER), OrderController.cancelCustomerOrder)
 
 // Partner routes
 /**

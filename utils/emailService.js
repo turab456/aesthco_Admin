@@ -433,6 +433,43 @@ class EmailService {
       mailOptions
     );
   }
+
+  async sendPartnerOrderCancelled(email, orderId, address, items) {
+    if (!email) return;
+    const brand = this.getBranding();
+    const body = `
+      <p>Order <strong>#${orderId}</strong> has been cancelled by the customer.</p>
+      ${items && items.length ? this.buildItemsTable(items) : ""}
+      ${
+        address
+          ? `<div style="margin-top:16px; padding:14px 16px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; font-size:13px; color:#0f172a;">
+              <div style="font-weight:700;">Delivery address</div>
+              <div>${address.name || ''}</div>
+              <div>${address.line1 || ''}</div>
+              ${address.line2 ? `<div>${address.line2}</div>` : ''}
+              <div>${[address.city, address.state, address.postalCode].filter(Boolean).join(', ')}</div>
+              ${address.phone ? `<div style="margin-top:6px; color:#475569;">Phone: ${address.phone}</div>` : ''}
+            </div>`
+          : ''
+      }
+      <p style="margin-top:12px; color:#475569;">This is for your awareness—no action required.</p>
+    `;
+
+    const mailOptions = {
+      from: process.env.ORDER_EMAIL_FROM || process.env.EMAIL_FROM,
+      to: email,
+      subject: `${brand.name}: Order #${orderId} cancelled`,
+      html: this.buildShell({
+        title: "Order cancelled",
+        body,
+        cta: { url: `${brand.url}/partner`, label: "View orders" },
+      }),
+    };
+
+    return (this.orderTransporter || this.authTransporter).sendMail(
+      mailOptions
+    );
+  }
 }
 
 module.exports = new EmailService();
