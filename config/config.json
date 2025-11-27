@@ -1,0 +1,16 @@
+{
+  "development": {
+    "username": "postgres.pbsgwtakajsnesrzzxqm",
+    "password": "azeem3105&",
+    "database": "postgres",
+    "host": "aws-0-ap-south-1.pooler.supabase.com",
+    "dialect": "postgres"
+  },
+  "production": {
+    "username": "postgres.pdnqhhdskpcmbbayyiox",
+    "password": "aesthco123",
+    "database": "postgres",
+    "host": "aws-1-ap-southeast-1.pooler.supabase.com",
+    "dialect": "postgres"
+  }
+}
