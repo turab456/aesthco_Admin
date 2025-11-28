@@ -79,7 +79,7 @@ class EmailService {
     return {
       name: "Aesthco",
       url: "https://aesthco.com",
-      logo: process.env.EMAIL_LOGO_URL || "https://aesthco.com/logo.png",
+      logo: process.env.EMAIL_LOGO_URL || "https://aesthco.com/black_logo.png",
       primary: "#000000",
       accent: "#111111",
     };
@@ -94,53 +94,113 @@ class EmailService {
     }).format(parsed);
   }
 
+  // --- NEW DESIGN TEMPLATE SHELL ---
   buildShell({ title, body, cta }) {
     const brand = this.getBranding();
-    const logoBlock = `
-      <td align="center" style="padding: 24px;">
-        <a href="${brand.url}" target="_blank" style="text-decoration:none; color:${brand.primary}; font-size: 24px; font-weight: 700; letter-spacing: 1px;">
-          <img src="${brand.logo}" alt="${brand.name}" style="max-width: 180px; height: 50px; object-fit: contain; display: block; margin: 0 auto 8px;" />
-          <div style="font-size:14px; color:#555;">${brand.name}</div>
-        </a>
-      </td>
-    `;
 
     const ctaBlock = cta
-      ? `<div style="text-align: center; margin: 28px 0;">
-          <a href="${cta.url}" style="display: inline-block; padding: 14px 26px; background: ${brand.primary}; color: #ffffff; text-decoration: none; border-radius: 9999px; font-weight: 600;">
-            ${cta.label}
-          </a>
-        </div>`
+      ? `
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 32px;">
+        <tr>
+          <td align="center">
+            <a href="${cta.url}" target="_blank" style="display: inline-block; padding: 16px 40px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 14px; letter-spacing: 1px; text-transform: uppercase;">
+              ${cta.label}
+            </a>
+          </td>
+        </tr>
+      </table>
+      `
       : "";
 
     return `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <title>${title}</title>
+        <style type="text/css">
+          body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+          table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+          img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; }
+          body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f9f9f9; }
+          
+          /* Mobile Styles */
+          @media screen and (max-width: 600px) {
+            .email-container { width: 100% !important; margin: auto !important; }
+            .content-padding { padding: 24px 20px !important; }
+            .mobile-title { font-size: 24px !important; line-height: 30px !important; }
+            .item-img { width: 60px !important; height: 60px !important; }
+          }
+        </style>
       </head>
-      <body style="margin:0; padding:0; background:#f7f7f7; font-family: Arial, sans-serif; color:#0f172a;">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f7f7f7; padding: 20px 0;">
-          <tr>
-            <td align="center">
-              <table width="640" border="0" cellspacing="0" cellpadding="0" style="background:#ffffff; border:1px solid #e5e7eb; border-radius: 16px; overflow: hidden;">
-                <tr>${logoBlock}</tr>
-                <tr>
-                  <td style="padding: 0 28px 32px 28px;">
-                    <h2 style="font-size: 22px; margin: 0 0 12px 0; color:#0f172a;">${title}</h2>
-                    <div style="font-size: 15px; line-height: 1.7; color:#334155;">
-                      ${body}
-                    </div>
-                    ${ctaBlock}
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
+      <body style="margin: 0; padding: 0; background-color: #f9f9f9; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        <center>
+          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9f9f9;">
+            <tr>
+              <td align="center" style="padding: 40px 0;">
+                
+                <table border="0" cellpadding="0" cellspacing="0" width="600" class="email-container" style="background-color: #ffffff; margin: 0 auto; border-radius: 0px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                  
+                  <tr>
+                    <td align="center" style="padding: 40px 0 20px 0;">
+                      <a href="${brand.url}" style="text-decoration: none;">
+                        <img src="${brand.logo}" alt="${brand.name}" style="width: 120px; max-width: 120px; height: auto; font-family: sans-serif; font-size: 15px; line-height: 15px; color: #000000;" />
+                      </a>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td class="content-padding" style="padding: 40px 48px; text-align: left;">
+                      <h1 class="mobile-title" style="margin: 0 0 24px 0; font-size: 24px; font-weight: 700; color: #000000; letter-spacing: -0.5px; text-align: center;">
+                        ${title}
+                      </h1>
+                      
+                      <div style="font-size: 15px; line-height: 26px; color: #333333;">
+                        ${body}
+                      </div>
+
+                      ${ctaBlock}
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="padding: 30px 48px; background-color: #fafafa; border-top: 1px solid #eeeeee; text-align: center;">
+                      <p style="margin: 0; font-size: 12px; line-height: 18px; color: #999999;">
+                        &copy; ${new Date().getFullYear()} ${brand.name}. All rights reserved.<br>
+                        <a href="${brand.url}" style="color: #999999; text-decoration: underline;">Visit Website</a>
+                      </p>
+                    </td>
+                  </tr>
+
+                </table>
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                  <tr><td height="40" style="font-size: 0; line-height: 0;">&nbsp;</td></tr>
+                </table>
+
+              </td>
+            </tr>
+          </table>
+        </center>
       </body>
       </html>
+    `;
+  }
+
+  // Helper for OTP Box Design
+  _getOtpBox(otp) {
+    return `
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 24px 0;">
+        <tr>
+          <td align="center" style="padding: 24px; background-color: #f4f4f5; border-radius: 4px;">
+            <span style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #000000; display: block;">
+              ${otp}
+            </span>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0; font-size: 13px; color: #666666; text-align: center;">Code expires in 10 minutes.</p>
     `;
   }
 
@@ -148,12 +208,11 @@ class EmailService {
     try {
       const brand = this.getBranding();
       const body = `
-        <p>Hi ${firstName},</p>
-        <p>Welcome to ${brand.name}! Please use the code below to verify your email address.</p>
-        <div style="border: 2px dashed ${brand.primary}; padding: 20px; margin: 20px 0; text-align:center; border-radius: 12px;">
-          <div style="font-size: 36px; letter-spacing: 10px; font-weight: 700; color: ${brand.primary};">${otp}</div>
-          <p style="margin: 12px 0 0 0; color: #475569; font-size: 13px;">This code expires in 10 minutes.</p>
-        </div>
+        <p style="margin: 0 0 16px;">Hi ${firstName},</p>
+        <p style="margin: 0;">Welcome to <strong>${
+          brand.name
+        }</strong>. Please use the verification code below to confirm your email address.</p>
+        ${this._getOtpBox(otp)}
       `;
 
       const mailOptions = {
@@ -161,9 +220,9 @@ class EmailService {
         to: email,
         subject: "Verify Your Email Address",
         html: this.buildShell({
-          title: "Verify your email",
+          title: "Verify Your Email",
           body,
-          cta: { url: brand.url, label: "Visit Aesthco" },
+          cta: { url: brand.url, label: "Visit Store" },
         }),
       };
 
@@ -177,12 +236,10 @@ class EmailService {
   async sendPasswordResetEmail(email, otp, firstName) {
     const brand = this.getBranding();
     const body = `
-      <p>Hi ${firstName},</p>
-      <p>Use the code below to reset your password.</p>
-      <div style="border: 2px dashed ${brand.primary}; padding: 20px; margin: 20px 0; text-align:center; border-radius: 12px;">
-        <div style="font-size: 36px; letter-spacing: 10px; font-weight: 700; color: ${brand.primary};">${otp}</div>
-        <p style="margin: 12px 0 0 0; color: #475569; font-size: 13px;">This code expires in 10 minutes.</p>
-      </div>
+      <p style="margin: 0 0 16px;">Hi ${firstName},</p>
+      <p style="margin: 0;">We received a request to reset your password. Use the code below to proceed.</p>
+      ${this._getOtpBox(otp)}
+      <p style="margin-top: 16px; font-size: 13px; color: #999999; text-align: center;">If you didn't request this, you can safely ignore this email.</p>
     `;
 
     const mailOptions = {
@@ -190,9 +247,9 @@ class EmailService {
       to: email,
       subject: "Your Password Reset Request",
       html: this.buildShell({
-        title: "Password reset",
+        title: "Reset Password",
         body,
-        cta: { url: brand.url, label: "Visit Aesthco" },
+        cta: { url: brand.url, label: "Visit Store" },
       }),
     };
 
@@ -202,16 +259,9 @@ class EmailService {
   async sendLoginOTP(email, otp, firstName) {
     const brand = this.getBranding();
     const body = `
-      <p>Hi ${firstName || "there"},</p>
-      <p>Use the code below to sign in securely.</p>
-      <div style="border: 2px dashed ${
-        brand.primary
-      }; padding: 20px; margin: 20px 0; text-align:center; border-radius: 12px;">
-        <div style="font-size: 36px; letter-spacing: 10px; font-weight: 700; color: ${
-          brand.primary
-        };">${otp}</div>
-        <p style="margin: 12px 0 0 0; color: #475569; font-size: 13px;">This code expires in 10 minutes.</p>
-      </div>
+      <p style="margin: 0 0 16px;">Hi ${firstName || "there"},</p>
+      <p style="margin: 0;">Use the code below to sign in securely to your account.</p>
+      ${this._getOtpBox(otp)}
     `;
 
     const mailOptions = {
@@ -219,9 +269,9 @@ class EmailService {
       to: email,
       subject: "Your login code",
       html: this.buildShell({
-        title: "Your one-time login code",
+        title: "Sign In Code",
         body,
-        cta: { url: brand.url, label: "Shop now" },
+        cta: { url: brand.url, label: "Shop Now" },
       }),
     };
 
@@ -231,11 +281,11 @@ class EmailService {
   async sendWelcomeEmail(email, firstName) {
     const brand = this.getBranding();
     const body = `
-      <p>Hi ${firstName || "there"},</p>
-      <p>We’re excited to have you at ${
+      <p style="margin: 0 0 16px;">Hi ${firstName || "there"},</p>
+      <p style="margin: 0 0 16px;">We’re excited to have you at <strong>${
         brand.name
-      }. Explore our latest drops and curated looks.</p>
-      <p style="margin-top: 12px; color:#475569;">Need help? Just reply to this email and we’ll assist you.</p>
+      }</strong>. Your account has been successfully created.</p>
+      <p style="margin: 0;">Get ready to explore our latest collections and exclusive drops.</p>
     `;
 
     const mailOptions = {
@@ -243,9 +293,9 @@ class EmailService {
       to: email,
       subject: `Welcome to ${brand.name}`,
       html: this.buildShell({
-        title: "Welcome aboard",
+        title: "Welcome to the Family",
         body,
-        cta: { url: brand.url, label: "Start shopping" },
+        cta: { url: brand.url, label: "Start Shopping" },
       }),
     };
 
@@ -258,49 +308,40 @@ class EmailService {
       .map(
         (item) => `
         <tr>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0;">
+          <td valign="top" style="padding: 16px 0; border-bottom: 1px solid #eeeeee; width: 60px;">
             <img src="${item.imageUrl || ""}" alt="${
           item.name
-        }" style="width:64px; height:64px; object-fit:cover; border-radius:8px; background:#f1f5f9;" />
+        }" class="item-img" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; background-color: #f4f4f4; display: block;" />
           </td>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:14px; line-height:1.5;">
-            <div style="font-weight:600;">${item.name}</div>
-            <div style="color:#475569; font-size:12px;">${
-              item.variant || ""
+          <td valign="top" style="padding: 16px 12px; border-bottom: 1px solid #eeeeee;">
+            <div style="font-size: 14px; font-weight: 600; color: #000000; line-height: 1.4;">${
+              item.name
             }</div>
+            <div style="font-size: 13px; color: #666666; margin-top: 4px;">
+              ${item.variant ? `<span>${item.variant}</span>` : ""}
+              ${item.variant ? '<span style="color:#cccccc"> | </span>' : ""}
+              <span>Qty: ${item.quantity}</span>
+            </div>
           </td>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:center; font-size:13px; color:#0f172a;">${
-            item.quantity
-          }</td>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:right; font-size:13px; color:#0f172a;">${this.formatCurrency(
-            item.unitPrice
-          )}</td>
-          <td style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:right; font-size:13px; color:#0f172a; font-weight:600;">${this.formatCurrency(
-            item.totalPrice
-          )}</td>
+          <td valign="top" align="right" style="padding: 16px 0; border-bottom: 1px solid #eeeeee; white-space: nowrap;">
+            <div style="font-size: 14px; font-weight: 600; color: #000000;">
+              ${this.formatCurrency(item.totalPrice)}
+            </div>
+          </td>
         </tr>`
       )
       .join("");
 
     return `
-      <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; margin-top: 12px; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+      <table width="100%" cellspacing="0" cellpadding="0" style="margin-top: 24px; border-collapse: collapse;">
         <thead>
-          <tr style="background:#f8fafc; color:#0f172a; font-size:12px; text-transform:uppercase; letter-spacing:0.05em;">
-            <th style="padding:10px; text-align:left;">Item</th>
-            <th style="padding:10px; text-align:left;"></th>
-            <th style="padding:10px;">Qty</th>
-            <th style="padding:10px; text-align:right;">Unit</th>
-            <th style="padding:10px; text-align:right;">Total</th>
+          <tr>
+            <th align="left" colspan="2" style="font-size: 11px; text-transform: uppercase; color: #999999; letter-spacing: 1px; font-weight: 600; padding-bottom: 12px; border-bottom: 2px solid #000000;">Item</th>
+            <th align="right" style="font-size: 11px; text-transform: uppercase; color: #999999; letter-spacing: 1px; font-weight: 600; padding-bottom: 12px; border-bottom: 2px solid #000000;">Total</th>
           </tr>
         </thead>
         <tbody>
           ${rows}
-          <tr>
-            <td colspan="4" style="padding:12px; text-align:right; font-size:13px; color:#475569;">Subtotal</td>
-            <td style="padding:12px; text-align:right; font-size:13px; font-weight:600; color:#0f172a;">${this.formatCurrency(
-              items.reduce((sum, i) => sum + Number(i.totalPrice || 0), 0)
-            )}</td>
-          </tr>
         </tbody>
       </table>
     `;
@@ -317,40 +358,63 @@ class EmailService {
     if (!to) return;
     const brand = this.getBranding();
     const statusLabels = {
-      PLACED: "Order placed",
-      CONFIRMED: "Order confirmed",
-      PACKED: "Order packed",
-      OUT_FOR_DELIVERY: "Out for delivery",
+      PLACED: "Order Placed",
+      CONFIRMED: "Order Confirmed",
+      PACKED: "Packed",
+      OUT_FOR_DELIVERY: "Out for Delivery",
       DELIVERED: "Delivered",
-      CANCELLED: "Order cancelled",
+      CANCELLED: "Cancelled",
     };
-    const label = statusLabels[status] || "Order update";
+    const label = statusLabels[status] || "Order Update";
+
+    // Summary Box HTML
+    const summaryHtml = `
+      <div style="background-color: #f9f9f9; border-radius: 8px; padding: 20px; margin-top: 0px;">
+        <table width="100%" cellspacing="0" cellpadding="0">
+          <tr>
+            <td style="font-size: 14px; color: #666666; padding-bottom: 8px;">Subtotal</td>
+            <td align="right" style="font-size: 14px; color: #000000; padding-bottom: 8px;">${this.formatCurrency(
+              summary?.subtotal || 0
+            )}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 14px; color: #666666; padding-bottom: 8px;">Shipping</td>
+            <td align="right" style="font-size: 14px; color: #000000; padding-bottom: 8px;">${
+              summary?.shippingFee === 0
+                ? "Free"
+                : this.formatCurrency(summary?.shippingFee || 0)
+            }</td>
+          </tr>
+          ${
+            summary?.discountAmount
+              ? `<tr>
+            <td style="font-size: 14px; color: #16a34a; padding-bottom: 8px;">Discount</td>
+            <td align="right" style="font-size: 14px; color: #16a34a; padding-bottom: 8px;">- ${this.formatCurrency(
+              summary.discountAmount
+            )}</td>
+          </tr>`
+              : ""
+          }
+          <tr>
+            <td style="padding-top: 12px; border-top: 1px solid #eeeeee; font-size: 16px; font-weight: 700; color: #000000;">Total</td>
+            <td align="right" style="padding-top: 12px; border-top: 1px solid #eeeeee; font-size: 16px; font-weight: 700; color: #000000;">${this.formatCurrency(
+              summary?.total || 0
+            )}</td>
+          </tr>
+        </table>
+      </div>
+    `;
 
     const body = `
-      <p>Hi ${customerName || "there"},</p>
-      <p>Your order <strong>#${orderId}</strong> is now <strong>${label}</strong>.</p>
+      <p style="margin: 0 0 16px;">Hi ${customerName || "there"},</p>
+      <p style="margin: 0 0 24px;">Your order <strong>#${orderId}</strong> status has been updated to: <strong>${label}</strong>.</p>
+      
       ${items && items.length ? this.buildItemsTable(items) : ""}
-      <div style="margin-top: 18px; padding: 14px 16px; background:#f8fafc; border-radius:12px; font-size:13px; color:#0f172a; border:1px solid #e2e8f0;">
-        <div style="display:flex; justify-content:space-between;"><span>Subtotal</span><span>${this.formatCurrency(
-          summary?.subtotal || 0
-        )}</span></div>
-        <div style="display:flex; justify-content:space-between; color:#475569;"><span>Shipping</span><span>${
-          summary?.shippingFee === 0
-            ? "Free"
-            : this.formatCurrency(summary?.shippingFee || 0)
-        }</span></div>
-        ${
-          summary?.discountAmount
-            ? `<div style="display:flex; justify-content:space-between; color:#16a34a;"><span>Discount</span><span>- ${this.formatCurrency(
-                summary.discountAmount
-              )}</span></div>`
-            : ""
-        }
-        <div style="display:flex; justify-content:space-between; font-weight:700; margin-top:8px;"><span>Total</span><span>${this.formatCurrency(
-          summary?.total || 0
-        )}</span></div>
-      </div>
-      <p style="margin-top: 16px; color:#475569;">We’ll keep you posted on the next steps.</p>
+      
+      <div style="height: 20px;"></div>
+      ${summaryHtml}
+      
+      <p style="margin-top: 32px; font-size: 13px; color: #999999; text-align: center;">We'll keep you posted on the next steps.</p>
     `;
 
     const mailOptions = {
@@ -360,7 +424,7 @@ class EmailService {
       html: this.buildShell({
         title: label,
         body,
-        cta: { url: `${brand.url}/orders`, label: "Track your order" },
+        cta: { url: `${brand.url}/orders/${orderId}`, label: "View Order" },
       }),
     };
 
@@ -373,12 +437,10 @@ class EmailService {
     if (!email) return;
     const brand = this.getBranding();
     const body = `
-      <p>Hi there,</p>
-      <p>Order <strong>#${orderId}</strong> has been marked delivered. Use the code below to confirm delivery with the customer if required.</p>
-      <div style="border: 2px dashed ${brand.primary}; padding: 18px; margin: 16px 0; text-align:center; border-radius: 12px;">
-        <div style="font-size: 32px; letter-spacing: 10px; font-weight: 700; color: ${brand.primary};">${otp}</div>
-      </div>
-      <p style="color:#475569; font-size:13px;">Keep this code confidential.</p>
+      <p style="margin: 0 0 16px;">Hi,</p>
+      <p style="margin: 0;">Order <strong>#${orderId}</strong> has been marked delivered. Use the code below to confirm delivery.</p>
+      ${this._getOtpBox(otp)}
+      <p style="margin: 0; font-size: 13px; color: #999999; text-align: center;">Keep this code confidential.</p>
     `;
 
     const mailOptions = {
@@ -386,9 +448,9 @@ class EmailService {
       to: email,
       subject: `Delivery code for order #${orderId}`,
       html: this.buildShell({
-        title: "Delivery confirmation code",
+        title: "Delivery Confirmation",
         body,
-        cta: { url: `${brand.url}/partner`, label: "View order" },
+        cta: { url: `${brand.url}/partner`, label: "Dashboard" },
       }),
     };
 
@@ -400,22 +462,26 @@ class EmailService {
   async sendPartnerNewOrder(email, orderId, items, address) {
     if (!email) return;
     const brand = this.getBranding();
+    
+    // Address Box
+    const addressHtml = address
+      ? `
+      <div style="margin-top: 24px; padding: 20px; border: 1px solid #eeeeee; border-radius: 8px; background-color: #fafafa;">
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #999999; font-weight: 700; margin-bottom: 8px;">Delivery Address</div>
+        <div style="font-size: 14px; font-weight: 700; color: #000000; margin-bottom: 4px;">${address.name || ''}</div>
+        <div style="font-size: 14px; color: #333333; line-height: 1.5;">
+          ${address.line1 || ''}<br>
+          ${address.line2 ? `${address.line2}<br>` : ''}
+          ${[address.city, address.state, address.postalCode].filter(Boolean).join(', ')}
+        </div>
+        ${address.phone ? `<div style="margin-top: 8px; font-size: 14px; color: #666666;">Phone: ${address.phone}</div>` : ''}
+      </div>`
+      : "";
+
     const body = `
-      <p>New order <strong>#${orderId}</strong> is ready to accept.</p>
+      <p style="margin: 0 0 16px;">New order <strong>#${orderId}</strong> is ready to accept.</p>
       ${items && items.length ? this.buildItemsTable(items) : ""}
-      ${
-        address
-          ? `<div style="margin-top:16px; padding:14px 16px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; font-size:13px; color:#0f172a;">
-              <div style="font-weight:700;">Delivery address</div>
-              <div>${address.name || ''}</div>
-              <div>${address.line1 || ''}</div>
-              ${address.line2 ? `<div>${address.line2}</div>` : ''}
-              <div>${[address.city, address.state, address.postalCode].filter(Boolean).join(', ')}</div>
-              ${address.phone ? `<div style="margin-top:6px; color:#475569;">Phone: ${address.phone}</div>` : ''}
-            </div>`
-          : ''
-      }
-      <p style="margin-top:12px; color:#475569;">Please accept and process the order at the earliest.</p>
+      ${addressHtml}
     `;
 
     const mailOptions = {
@@ -423,9 +489,9 @@ class EmailService {
       to: email,
       subject: `${brand.name}: New order #${orderId}`,
       html: this.buildShell({
-        title: "New order available",
+        title: "New Order Alert",
         body,
-        cta: { url: `${brand.url}/partner`, label: "View order" },
+        cta: { url: `${brand.url}/partner`, label: "Accept Order" },
       }),
     };
 
@@ -437,22 +503,21 @@ class EmailService {
   async sendPartnerOrderCancelled(email, orderId, address, items) {
     if (!email) return;
     const brand = this.getBranding();
+    
+    // Minimal address summary
+    const addressHtml = address
+      ? `
+      <div style="margin-top: 24px; padding: 16px; border: 1px solid #eeeeee; border-radius: 8px; font-size: 13px; color: #666666;">
+        <strong>Customer:</strong> ${address.name || ''} <br>
+        <strong>City:</strong> ${address.city || ''}
+      </div>`
+      : "";
+
     const body = `
-      <p>Order <strong>#${orderId}</strong> has been cancelled by the customer.</p>
+      <p style="margin: 0 0 16px;">Order <strong>#${orderId}</strong> has been cancelled by the customer.</p>
       ${items && items.length ? this.buildItemsTable(items) : ""}
-      ${
-        address
-          ? `<div style="margin-top:16px; padding:14px 16px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; font-size:13px; color:#0f172a;">
-              <div style="font-weight:700;">Delivery address</div>
-              <div>${address.name || ''}</div>
-              <div>${address.line1 || ''}</div>
-              ${address.line2 ? `<div>${address.line2}</div>` : ''}
-              <div>${[address.city, address.state, address.postalCode].filter(Boolean).join(', ')}</div>
-              ${address.phone ? `<div style="margin-top:6px; color:#475569;">Phone: ${address.phone}</div>` : ''}
-            </div>`
-          : ''
-      }
-      <p style="margin-top:12px; color:#475569;">This is for your awareness—no action required.</p>
+      ${addressHtml}
+      <p style="margin-top: 24px; font-size: 13px; color: #999999; text-align: center;">No action required.</p>
     `;
 
     const mailOptions = {
@@ -460,9 +525,9 @@ class EmailService {
       to: email,
       subject: `${brand.name}: Order #${orderId} cancelled`,
       html: this.buildShell({
-        title: "Order cancelled",
+        title: "Order Cancelled",
         body,
-        cta: { url: `${brand.url}/partner`, label: "View orders" },
+        cta: { url: `${brand.url}/partner`, label: "Dashboard" },
       }),
     };
 
