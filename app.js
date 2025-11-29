@@ -14,6 +14,7 @@ const orderRoutes = require('./routes/Orders/orderRoutes');
 const couponRoutes = require('./routes/Coupons/couponRoutes');
 const reviewRoutes = require('./routes/Products/reviewRoutes');
 const dashboardRoutes = require('./routes/Dashboard/dashboardRoutes');
+const userAdminRoutes = require('./routes/User/userAdminRoutes');
 
 const app = express();
 
@@ -59,6 +60,7 @@ app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/coupons', couponRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/admin/users', userAdminRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use((req, res) => {
