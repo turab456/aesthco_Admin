@@ -18,7 +18,7 @@ module.exports = (sequelize) => {
         allowNull: false,
       },
       orderId: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
       },
       rating: {

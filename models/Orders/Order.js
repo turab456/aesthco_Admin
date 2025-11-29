@@ -19,8 +19,7 @@ module.exports = (sequelize) => {
     'Order',
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
         primaryKey: true,
       },
       userId: {
@@ -111,6 +110,29 @@ module.exports = (sequelize) => {
       timestamps: true,
     },
   )
+
+  Order.beforeCreate(async (order, options) => {
+    try {
+      const lastOrder = await Order.findOne({
+        order: [['createdAt', 'DESC']],
+        transaction: options.transaction
+      })
+      
+      let nextNumber = 20251
+      if (lastOrder && lastOrder.id && typeof lastOrder.id === 'string' && lastOrder.id.startsWith('OD')) {
+        const lastNumber = parseInt(lastOrder.id.replace('OD', ''))
+        if (!isNaN(lastNumber)) {
+          nextNumber = lastNumber + 1
+        }
+      }
+      
+      order.id = `OD${nextNumber}`
+    } catch (error) {
+      console.error('Error generating order ID:', error)
+      // Fallback to timestamp-based ID if there's an error
+      order.id = `OD${Date.now().toString().slice(-5)}`
+    }
+  })
 
   Order.associate = (models) => {
     Order.belongsTo(models.User, { foreignKey: 'userId', as: 'customer' })
