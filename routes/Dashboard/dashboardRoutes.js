@@ -38,6 +38,6 @@ router.get('/admin', AuthMiddleware.authorize(User.ROLES.SUPER_ADMIN), Dashboard
  *       200:
  *         description: Dashboard numbers for the authenticated partner
  */
-router.get('/partner', AuthMiddleware.authorize(User.ROLES.PARTNER), DashboardController.partner)
+router.get('/partner', AuthMiddleware.authorize(User.ROLES.PARTNER, User.ROLES.SUPER_ADMIN), DashboardController.partner)
 
 module.exports = router

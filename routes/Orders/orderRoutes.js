@@ -130,6 +130,19 @@ router.post('/', AuthMiddleware.authorize(CUSTOMER), OrderController.createFromC
  *                   items: { $ref: '#/components/schemas/Order' }
  */
 router.get('/', AuthMiddleware.authorize(CUSTOMER), OrderController.listCustomerOrders)
+// Recent orders (last 24 hours)
+/**
+ * @swagger
+ * /api/v1/orders/recent:
+ *   get:
+ *     summary: List my recent orders (last 24 hours)
+ *     tags: [Orders]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200:
+ *         description: Recent orders
+ */
+router.get('/recent', AuthMiddleware.authorize(CUSTOMER), OrderController.listCustomerRecentOrders)
 /**
  * @swagger
  * /api/v1/orders/{id}:

@@ -153,7 +153,7 @@ class DashboardController {
 
   static async partner(req, res) {
     try {
-      const partnerId = req.user.id
+      const partnerId = req.query.partnerId || req.user.id
       const [orders, revenue] = await Promise.all([
         buildPartnerOrderStats(partnerId),
         buildPartnerRevenueStats(partnerId),

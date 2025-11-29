@@ -12,6 +12,7 @@ const {
   CouponRedemption,
   User,
 } = require('../../models')
+const { Op } = require('sequelize')
 const CouponService = require('../../services/CouponService')
 const EmailService = require('../../utils/emailService')
 
@@ -356,6 +357,25 @@ class OrderController {
     } catch (error) {
       console.error('List customer orders error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch orders' })
+    }
+  }
+
+  static async listCustomerRecentOrders(req, res) {
+    const userId = req.user.id
+    try {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000) // last 24 hours
+      const orders = await Order.findAll({
+        where: {
+          userId,
+          createdAt: { [Op.gte]: since },
+        },
+        order: [['createdAt', 'DESC']],
+        include: [{ model: OrderItem, as: 'items' }],
+      })
+      return res.json({ success: true, data: orders })
+    } catch (error) {
+      console.error('List recent customer orders error:', error)
+      return res.status(500).json({ success: false, message: 'Failed to fetch recent orders' })
     }
   }
 
