@@ -167,6 +167,13 @@ class AuthController {
 
       const existingUser = await User.findOne({ where: { email: normalizedEmail } });
       if (existingUser) {
+        if (!existingUser.isActive) {
+          return res.status(403).json({
+            success: false,
+            message: 'Account is inactive.'
+          });
+        }
+
         if (!existingUser.isVerified) {
           await sendVerificationOTP(existingUser);
           return res.status(202).json({
@@ -219,8 +226,65 @@ class AuthController {
   }
 
   static async registerPartner(req, res) {
-    req.body.role = PARTNER_ROLE;
-    return AuthController.register(req, res);
+    try {
+      const { fullName, email, password } = req.body;
+
+      if (!fullName || !email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name, email, and password are required.'
+        });
+      }
+
+      const normalizedEmail = normalizeEmail(email);
+      const normalizedName = normalizeName(fullName);
+
+      const existingUser = await User.findOne({ where: { email: normalizedEmail } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email already exists.'
+        });
+      }
+
+      const user = await User.create({
+        fullName: normalizedName,
+        email: normalizedEmail,
+        password,
+        role: PARTNER_ROLE,
+        isVerified: true
+      });
+
+      const { accessToken, refreshToken } = JWTUtils.generateTokenPair(user);
+      await RefreshToken.createToken(
+        refreshToken,
+        user.id,
+        req.get('User-Agent') || 'Unknown Device'
+      );
+
+      const tokenPayload = buildRoleTokenPayload(user.role, { accessToken, refreshToken });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Partner account created successfully.',
+        data: {
+          user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            isVerified: user.isVerified
+          },
+          ...tokenPayload
+        }
+      });
+    } catch (error) {
+      console.error('Partner registration error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to register partner.'
+      });
+    }
   }
 
   static async registerSuperAdmin(req, res) {
@@ -818,6 +882,53 @@ class AuthController {
       return res.status(500).json({
         success: false,
         message: 'Internal server error.'
+      });
+    }
+  }
+
+  static async toggleUserActiveStatus(req, res) {
+    try {
+      const { userId } = req.params;
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required.'
+        });
+      }
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found.'
+        });
+      }
+
+      const newActiveStatus = !user.isActive;
+      await user.update({ isActive: newActiveStatus });
+
+      if (!newActiveStatus) {
+        await RefreshToken.update(
+          { isRevoked: true },
+          { where: { userId: user.id } }
+        );
+      }
+
+      return res.json({
+        success: true,
+        message: `User ${newActiveStatus ? 'activated' : 'deactivated'} successfully.`,
+        data: {
+          id: user.id,
+          email: user.email,
+          isActive: user.isActive
+        }
+      });
+    } catch (error) {
+      console.error('Toggle user active status error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update user status.'
       });
     }
   }
