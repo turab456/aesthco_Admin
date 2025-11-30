@@ -40,6 +40,10 @@ const buildShippingLabel = (order, items) => {
     orderId: order.id,
     codAmount: Number(order.total),
     paymentMethod: order.paymentMethod,
+    shippingFee: Number(order.shippingFee),
+    subtotal: Number(order.subtotal),
+    discountAmount: Number(order.discountAmount),
+    total: Number(order.total),
     customer: {
       name: order.addressName,
       phone: order.addressPhone,
@@ -57,6 +61,29 @@ const buildShippingLabel = (order, items) => {
       amount: Number(item.totalPrice),
       sku: item.sku,
     })),
+    // Pass the overall order data for reference
+    orderData: {
+      id: order.id,
+      userId: order.userId,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      subtotal: order.subtotal,
+      shippingFee: order.shippingFee,
+      discountAmount: order.discountAmount,
+      total: order.total,
+      couponCode: order.couponCode,
+      couponId: order.couponId,
+      addressName: order.addressName,
+      addressPhone: order.addressPhone,
+      addressLine1: order.addressLine1,
+      addressLine2: order.addressLine2,
+      city: order.city,
+      state: order.state,
+      postalCode: order.postalCode,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    }
   }
 }
 
@@ -69,6 +96,51 @@ const mapItemsForEmail = (items = []) =>
     totalPrice: Number(item.totalPrice || 0),
     imageUrl: item.imageUrl,
   }))
+
+const normalizeOrder = (order) => {
+  if (!order) return order
+  if (Array.isArray(order)) return order.map(normalizeOrder)
+
+  // Convert sequelize instance to plain object if needed
+  const o = typeof order.get === 'function' ? order.get({ plain: true }) : { ...order }
+
+  const toNumber = (v) => (v === undefined || v === null ? v : Number(v))
+
+  o.subtotal = toNumber(o.subtotal)
+  o.shippingFee = toNumber(o.shippingFee)
+  o.discountAmount = toNumber(o.discountAmount)
+  o.total = toNumber(o.total)
+
+  if (o.items && Array.isArray(o.items)) {
+    o.items = o.items.map((it) => ({
+      ...it,
+      quantity: toNumber(it.quantity),
+      unitPrice: toNumber(it.unitPrice),
+      totalPrice: toNumber(it.totalPrice),
+    }))
+  }
+
+  // Ensure shippingLabel contains current shipping summary (useful if older records lack it)
+  try {
+    if (!o.shippingLabel || o.shippingLabel.shippingFee === undefined) {
+      o.shippingLabel = buildShippingLabel(o, o.items || [])
+    } else {
+      // merge numeric summary fields into existing label for consistency
+      o.shippingLabel = {
+        ...o.shippingLabel,
+        shippingFee: toNumber(o.shippingLabel.shippingFee ?? o.shippingFee),
+        subtotal: toNumber(o.shippingLabel.subtotal ?? o.subtotal),
+        discountAmount: toNumber(o.shippingLabel.discountAmount ?? o.discountAmount),
+        total: toNumber(o.shippingLabel.total ?? o.total),
+      }
+    }
+  } catch (err) {
+    // non-fatal: if building label fails, leave as-is
+    console.warn('normalizeOrder: failed to build/merge shippingLabel', err?.message || err)
+  }
+
+  return o
+}
 
 const sendOrderStatusEmailSafe = async ({ order, status, user, items }) => {
   try {
@@ -347,7 +419,7 @@ class OrderController {
       })
       void notifyPartnersNewOrderSafe(order, order.items || [])
 
-      return res.status(201).json({ success: true, data: order })
+      return res.status(201).json({ success: true, data: normalizeOrder(order) })
     } catch (error) {
       console.error('Create order error:', error)
       return res.status(400).json({ success: false, message: error.message || 'Failed to create order' })
@@ -362,7 +434,7 @@ class OrderController {
         order: [['createdAt', 'DESC']],
         include: [{ model: OrderItem, as: 'items' }],
       })
-      return res.json({ success: true, data: orders })
+      return res.json({ success: true, data: normalizeOrder(orders) })
     } catch (error) {
       console.error('List customer orders error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch orders' })
@@ -381,7 +453,7 @@ class OrderController {
         order: [['createdAt', 'DESC']],
         include: [{ model: OrderItem, as: 'items' }],
       })
-      return res.json({ success: true, data: orders })
+      return res.json({ success: true, data: normalizeOrder(orders) })
     } catch (error) {
       console.error('List recent customer orders error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch recent orders' })
@@ -401,7 +473,7 @@ class OrderController {
         return res.status(404).json({ success: false, message: 'Order not found' })
       }
 
-      return res.json({ success: true, data: order })
+      return res.json({ success: true, data: normalizeOrder(order) })
     } catch (error) {
       console.error('Get customer order error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch order' })
@@ -447,7 +519,7 @@ class OrderController {
 
       void sendPartnerCancelSafe(order, order.items || [])
 
-      return res.json({ success: true, data: order })
+      return res.json({ success: true, data: normalizeOrder(order) })
     } catch (error) {
       console.error('Cancel order error:', error)
       return res.status(500).json({ success: false, message: 'Failed to cancel order' })
@@ -467,7 +539,7 @@ class OrderController {
           },
         ],
       })
-      return res.json({ success: true, data: orders })
+      return res.json({ success: true, data: normalizeOrder(orders) })
     } catch (error) {
       console.error('List admin orders error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch orders' })
@@ -490,7 +562,7 @@ class OrderController {
       if (!order) {
         return res.status(404).json({ success: false, message: 'Order not found' })
       }
-      return res.json({ success: true, data: order })
+      return res.json({ success: true, data: normalizeOrder(order) })
     } catch (error) {
       console.error('Admin get order error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch order' })
@@ -510,7 +582,7 @@ class OrderController {
           },
         ],
       })
-      return res.json({ success: true, data: orders })
+      return res.json({ success: true, data: normalizeOrder(orders) })
     } catch (error) {
       console.error('List partner orders error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch orders' })
@@ -575,7 +647,7 @@ class OrderController {
         void sendPartnerDeliveryOtpSafe(reloadedOrder)
       }
 
-      return res.json({ success: true, data: reloadedOrder })
+      return res.json({ success: true, data: normalizeOrder(reloadedOrder) })
     } catch (error) {
       console.error('Update order status error:', error)
       return res.status(500).json({ success: false, message: 'Failed to update status' })
@@ -600,7 +672,7 @@ class OrderController {
         return res.status(404).json({ success: false, message: 'Order not found' })
       }
 
-      return res.json({ success: true, data: order })
+      return res.json({ success: true, data: normalizeOrder(order) })
     } catch (error) {
       console.error('Partner get order error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch order' })
@@ -637,7 +709,7 @@ class OrderController {
         })
       }
 
-      return res.json({ success: true, data: order })
+      return res.json({ success: true, data: normalizeOrder(order) })
     } catch (error) {
       console.error('Accept order error:', error)
       return res.status(500).json({ success: false, message: 'Failed to accept order' })
