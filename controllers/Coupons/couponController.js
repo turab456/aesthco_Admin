@@ -86,7 +86,11 @@ class CouponController {
         maxDiscountAmount: parsedMaxDiscount,
       })
 
-      return res.status(201).json({ success: true, data: coupon })
+      return res.status(201).json({
+        success: true,
+        message: 'Coupon created successfully',
+        data: coupon,
+      })
     } catch (error) {
       console.error('Create coupon error:', error)
       return res.status(400).json({ success: false, message: error.message || 'Failed to create coupon' })
@@ -178,7 +182,11 @@ class CouponController {
       }
 
       await coupon.update(updates)
-      return res.json({ success: true, data: coupon })
+      return res.json({
+        success: true,
+        message: 'Coupon updated successfully',
+        data: coupon,
+      })
     } catch (error) {
       console.error('Update coupon error:', error)
       return res.status(400).json({ success: false, message: error.message || 'Failed to update coupon' })
@@ -196,7 +204,10 @@ class CouponController {
         order: [['createdAt', 'DESC']],
       })
 
-      return res.json({ success: true, data: coupons })
+      return res.json({
+        success: true,
+        data: coupons,
+      })
     } catch (error) {
       console.error('List coupons error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch coupons' })
@@ -222,6 +233,7 @@ class CouponController {
 
       return res.json({
         success: true,
+        message: 'Coupon validated successfully',
         data: {
           coupon,
           discountAmount,
@@ -297,7 +309,10 @@ class CouponController {
               return usedCount < perUserLimit
             })
 
-      return res.json({ success: true, data: filteredCoupons })
+      return res.json({
+        success: true,
+        data: filteredCoupons,
+      })
     } catch (error) {
       console.error('List available coupons error:', error)
       return res.status(500).json({ success: false, message: 'Failed to fetch coupons' })

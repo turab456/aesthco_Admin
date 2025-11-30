@@ -647,7 +647,11 @@ class OrderController {
         void sendPartnerDeliveryOtpSafe(reloadedOrder)
       }
 
-      return res.json({ success: true, data: normalizeOrder(reloadedOrder) })
+      return res.json({
+        success: true,
+        message: 'Order status updated successfully',
+        data: normalizeOrder(reloadedOrder),
+      })
     } catch (error) {
       console.error('Update order status error:', error)
       return res.status(500).json({ success: false, message: 'Failed to update status' })
@@ -709,7 +713,11 @@ class OrderController {
         })
       }
 
-      return res.json({ success: true, data: normalizeOrder(order) })
+      return res.json({
+        success: true,
+        message: 'Order accepted successfully',
+        data: normalizeOrder(order),
+      })
     } catch (error) {
       console.error('Accept order error:', error)
       return res.status(500).json({ success: false, message: 'Failed to accept order' })

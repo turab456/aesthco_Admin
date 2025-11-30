@@ -560,6 +560,51 @@ class AuthController {
     }
   }
 
+  static async resendCustomerOTP(req, res) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required.'
+        });
+      }
+
+      const normalizedEmail = normalizeEmail(email);
+      const user = await User.findOne({ where: { email: normalizedEmail } });
+
+      if (!user || user.role !== DEFAULT_CUSTOMER_ROLE) {
+        return res.status(404).json({
+          success: false,
+          message: 'Customer account not found. Please request a new OTP.'
+        });
+      }
+
+      if (!user.isActive) {
+        return res.status(403).json({
+          success: false,
+          message: 'Account is inactive.'
+        });
+      }
+
+      await sendLoginOTP(user);
+
+      return res.json({
+        success: true,
+        message: 'A new OTP has been sent to your email.',
+        data: {
+          email: user.email
+        }
+      });
+    } catch (error) {
+      console.error('Resend customer OTP error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to resend OTP.'
+      });
+    }
+  }
+
   static async verifyCustomerOTP(req, res) {
     try {
       const { email, otp } = req.body;
