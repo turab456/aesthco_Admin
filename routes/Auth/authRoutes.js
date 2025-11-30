@@ -322,6 +322,7 @@ router.post('/forgot-password', otpLimiter, AuthController.forgotPassword);
  *         description: Password reset successfully.
  */
 router.post('/reset-password', otpLimiter, AuthController.resetPassword);
+router.post('/password-reset/verify-otp', otpLimiter, AuthController.verifyPasswordResetOTP);
 
 /**
  * @swagger

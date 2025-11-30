@@ -8,5 +8,5 @@ module.exports = {
 
   async down() {
     /* no rollback needed */
-  }
+  },
 };

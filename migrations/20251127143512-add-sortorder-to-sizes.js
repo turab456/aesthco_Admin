@@ -1,5 +1,5 @@
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up(queryInterface) {
     await queryInterface.sequelize.query(`
     ALTER TABLE "masters"."Sizes"
     ADD COLUMN IF NOT EXISTS "sortOrder" INTEGER;
@@ -12,14 +12,8 @@ module.exports = {
   `);
   },
 
-
   async down(queryInterface) {
-    await queryInterface.sequelize.query(
-      'DROP INDEX IF EXISTS "masters"."Sizes_sortOrder_idx";'
-    );
-    await queryInterface.removeColumn(
-      { tableName: 'Sizes', schema: 'masters' },
-      'sortOrder'
-    );
-  }
+    await queryInterface.sequelize.query('DROP INDEX IF EXISTS "masters"."Sizes_sortOrder_idx";');
+    await queryInterface.removeColumn({ tableName: 'Sizes', schema: 'masters' }, 'sortOrder');
+  },
 };
