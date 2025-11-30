@@ -274,6 +274,7 @@ class OrderController {
         postalCode: address.postalCode,
       }
 
+
       const order = await Order.sequelize.transaction(async (t) => {
         let couponData = { coupon: null, discountAmount: 0 }
         if (couponCode) {
@@ -302,6 +303,14 @@ class OrderController {
         )
         const itemsWithOrder = mappedItems.map((i) => ({ ...i, orderId: createdOrder.id }))
         const createdItems = await OrderItem.bulkCreate(itemsWithOrder, { transaction: t, returning: true })
+
+        // Decrease variant quantity for each item
+        for (const item of createdItems) {
+          await ProductVariant.decrement(
+            { stockQuantity: item.quantity },
+            { where: { id: item.variantId }, transaction: t }
+          )
+        }
 
         const shippingLabel = buildShippingLabel(createdOrder, createdItems)
         await createdOrder.update({ shippingLabel }, { transaction: t })
@@ -414,6 +423,17 @@ class OrderController {
 
       if (['PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'RETURN_REQUESTED', 'RETURNED'].includes(order.status)) {
         return res.status(400).json({ success: false, message: 'Order cannot be cancelled at this stage.' })
+      }
+
+
+      // Revert variant quantity for each item
+      if (order.items && order.items.length) {
+        for (const item of order.items) {
+          await ProductVariant.increment(
+            { stockQuantity: item.quantity },
+            { where: { id: item.variantId } }
+          )
+        }
       }
 
       await order.update({ status: 'CANCELLED', paymentStatus: 'cancelled' })
