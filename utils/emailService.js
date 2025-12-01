@@ -79,7 +79,7 @@ class EmailService {
     return {
       name: "Aesthco",
       url: "https://aesthco.com",
-      logo: process.env.EMAIL_LOGO_URL || "https://aesthco.com/black_logo.png",
+      logo: process.env.EMAIL_LOGO_URL || "https://aesthco.com/navbar.png",
       primary: "#000000",
       accent: "#111111",
     };

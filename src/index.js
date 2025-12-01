@@ -4,7 +4,7 @@ const { sequelize } = require('../models');
 
 const PORT = process.env.PORT || 4000;
 const SHUTDOWN_DELAY_MS = 500;
-const SYNC_ON_BOOT = process.env.SYNC_ON_BOOT !== 'false';
+const SYNC_ON_BOOT = process.env.SYNC_ON_BOOT !== 'true';
 
 async function ensureSchemasAndIndexes() {
   // Ensure schemas exist (idempotent)
