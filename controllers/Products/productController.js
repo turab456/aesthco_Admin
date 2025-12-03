@@ -26,6 +26,10 @@ const serializeProduct = (product) => ({
   description: product.description,
   gender: product.gender,
   isActive: product.isActive,
+  performanceAndDurability: product.performanceAndDurability,
+  fitAndDesign: product.fitAndDesign,
+  seasonalComfort: product.seasonalComfort,
+  quickAnswers: product.quickAnswers,
   categoryId: product.categoryId,
   collectionId: product.collectionId,
   category: product.category ? { id: product.category.id, name: product.category.name, slug: product.category.slug } : null,
@@ -249,7 +253,7 @@ class ProductController {
 
     const t = await Category.sequelize.transaction();
     try {
-      const { name, slug, shortDescription, description, gender, categoryId, collectionId, isActive = true, variants = [], images = [] } = req.body;
+      const { name, slug, shortDescription, description, gender, categoryId, collectionId, isActive = true, variants = [], images = [], performanceAndDurability, fitAndDesign, seasonalComfort, quickAnswers } = req.body;
 
       // Validation
       const errors = [];
@@ -315,7 +319,11 @@ class ProductController {
           gender,
           categoryId,
           collectionId: collectionId || null,
-          isActive
+          isActive,
+          performanceAndDurability,
+          fitAndDesign,
+          seasonalComfort,
+          quickAnswers
         },
         { transaction: t }
       );
@@ -377,7 +385,7 @@ class ProductController {
     const t = await Category.sequelize.transaction();
     try {
       const { id } = req.params;
-      const { name, slug, shortDescription, description, gender, categoryId, collectionId, isActive, variants = [], images = [] } = req.body;
+      const { name, slug, shortDescription, description, gender, categoryId, collectionId, isActive, variants = [], images = [], performanceAndDurability, fitAndDesign, seasonalComfort, quickAnswers } = req.body;
 
       // Validation
       const errors = [];
@@ -449,7 +457,11 @@ class ProductController {
           gender,
           categoryId,
           collectionId: collectionId || null,
-          isActive
+          isActive,
+          performanceAndDurability,
+          fitAndDesign,
+          seasonalComfort,
+          quickAnswers
         },
         { transaction: t }
       );

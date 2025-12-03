@@ -42,6 +42,23 @@ module.exports = (sequelize) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
+    },
+    performanceAndDurability: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    fitAndDesign: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    seasonalComfort: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    quickAnswers: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: []
     }
   }, {
     tableName: 'Products',
