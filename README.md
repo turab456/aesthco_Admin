@@ -17,5 +17,7 @@ npm run local    # local Postgres
 npm run dev      # Supabase dev
 npm run prod     # production config
 ```
+# swagger ui
+http://localhost:4000/api-docs
 
 Each environment file contains the required variables (database, JWT, email, Cloudinary). Update `.env.prod` with real production credentials before deploying.***

@@ -98,6 +98,7 @@ router.post('/register', registerLimiter, AuthController.registerCustomer);
 router.post('/register/customer', registerLimiter, AuthController.registerCustomer);
 
 router.post('/customer/otp/send', otpLimiter, AuthController.sendCustomerOTP);
+router.post('/customer/otp/resend', otpLimiter, AuthController.resendCustomerOTP);
 router.post('/customer/otp/verify', otpLimiter, AuthController.verifyCustomerOTP);
 
 /**
@@ -321,6 +322,7 @@ router.post('/forgot-password', otpLimiter, AuthController.forgotPassword);
  *         description: Password reset successfully.
  */
 router.post('/reset-password', otpLimiter, AuthController.resetPassword);
+router.post('/password-reset/verify-otp', otpLimiter, AuthController.verifyPasswordResetOTP);
 
 /**
  * @swagger

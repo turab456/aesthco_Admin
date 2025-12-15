@@ -138,6 +138,11 @@ module.exports = (sequelize) => {
       foreignKey: "userId",
       as: "refreshTokens",
     });
+
+    User.hasMany(models.Review, {
+      foreignKey: "userId",
+      as: "reviews",
+    });
   };
 
   User.ROLES = {

@@ -31,6 +31,11 @@ module.exports = (sequelize) => {
         min: 0
       }
     },
+    showInListing: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
+    },
     basePrice: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
@@ -54,7 +59,8 @@ module.exports = (sequelize) => {
     tableName: 'ProductVariants',
     schema: 'catalog',
     indexes: [
-      { unique: true, fields: ['productId', 'colorId', 'sizeId'] }
+      // Keep a non-unique index for lookups without blocking multiple size/color combos
+      { unique: false, fields: ['productId', 'colorId', 'sizeId'] }
     ]
   });
 

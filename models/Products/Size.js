@@ -15,12 +15,18 @@ module.exports = (sequelize) => {
     label: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    sortOrder: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      unique: true
     }
   }, {
     tableName: 'Sizes',
     schema: 'masters',
     indexes: [
-      { unique: true, fields: ['code'] }
+      { unique: true, fields: ['code'] },
+      { unique: true, fields: ['sortOrder'] }
     ]
   });
 

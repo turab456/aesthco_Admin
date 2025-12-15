@@ -36,6 +36,7 @@ const ROLE_TOKEN_KEYS = {
 const normalizeEmail = (email = '') => email.trim().toLowerCase();
 const normalizeName = (name = '') => name.trim();
 const getFirstName = (fullName = '') => normalizeName(fullName).split(' ')[0] || 'there';
+const normalizeOtp = (otp = '') => String(otp || '').trim();
 
 const buildRoleTokenPayload = (role, { accessToken = null, refreshToken = null }) => {
   const mapping = ROLE_TOKEN_KEYS[role] || ROLE_TOKEN_KEYS.default;
@@ -109,6 +110,15 @@ const ensureCustomerAccount = async (email, fullName = '') => {
   return { user, isNew };
 };
 
+const sendWelcomeIfNew = async (isNew, user) => {
+  if (!isNew) return;
+  try {
+    await EmailService.sendWelcomeEmail(user.email, getFirstName(user.fullName));
+  } catch (err) {
+    console.error('Welcome email failed:', err?.message || err);
+  }
+};
+
 class AuthController {
   static async register(req, res) {
     try {
@@ -126,17 +136,60 @@ class AuthController {
       }
 
       if (requestedRole === DEFAULT_CUSTOMER_ROLE) {
-        const { user, isNew } = await ensureCustomerAccount(normalizedEmail, normalizedName);
-        await sendLoginOTP(user);
+        if (!password || password.length < 6) {
+          return res.status(400).json({
+            success: false,
+            message: 'Password (min 6 chars) is required for customers.'
+          });
+        }
 
-        return res.status(isNew ? 201 : 200).json({
+        const existingUser = await User.findOne({ where: { email: normalizedEmail } });
+        if (existingUser) {
+          if (!existingUser.isActive) {
+            return res.status(403).json({
+              success: false,
+              message: 'Account is inactive.'
+            });
+          }
+
+          // If already registered but not verified, resend verification OTP
+          if (!existingUser.isVerified) {
+            await sendVerificationOTP(existingUser);
+            return res.status(202).json({
+              success: true,
+              message: 'Account exists but is not verified. Verification OTP resent.',
+              data: {
+                userId: existingUser.id,
+                email: existingUser.email,
+                role: existingUser.role
+              }
+            });
+          }
+
+          return res.status(400).json({
+            success: false,
+            message: 'An account with this email already exists.'
+          });
+        }
+
+        const user = await User.create({
+          fullName: normalizedName || null,
+          email: normalizedEmail,
+          password,
+          role: DEFAULT_CUSTOMER_ROLE,
+          isVerified: false
+        });
+
+        await sendVerificationOTP(user);
+        await sendWelcomeIfNew(true, user);
+
+        return res.status(201).json({
           success: true,
-          message: 'OTP sent to your email. Please verify to continue.',
+          message: 'Account created. A verification OTP has been emailed to you.',
           data: {
             userId: user.id,
             email: user.email,
-            role: user.role,
-            isNewUser: isNew
+            role: user.role
           }
         });
       }
@@ -157,6 +210,13 @@ class AuthController {
 
       const existingUser = await User.findOne({ where: { email: normalizedEmail } });
       if (existingUser) {
+        if (!existingUser.isActive) {
+          return res.status(403).json({
+            success: false,
+            message: 'Account is inactive.'
+          });
+        }
+
         if (!existingUser.isVerified) {
           await sendVerificationOTP(existingUser);
           return res.status(202).json({
@@ -209,8 +269,65 @@ class AuthController {
   }
 
   static async registerPartner(req, res) {
-    req.body.role = PARTNER_ROLE;
-    return AuthController.register(req, res);
+    try {
+      const { fullName, email, password } = req.body;
+
+      if (!fullName || !email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Full name, email, and password are required.'
+        });
+      }
+
+      const normalizedEmail = normalizeEmail(email);
+      const normalizedName = normalizeName(fullName);
+
+      const existingUser = await User.findOne({ where: { email: normalizedEmail } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email already exists.'
+        });
+      }
+
+      const user = await User.create({
+        fullName: normalizedName,
+        email: normalizedEmail,
+        password,
+        role: PARTNER_ROLE,
+        isVerified: true
+      });
+
+      const { accessToken, refreshToken } = JWTUtils.generateTokenPair(user);
+      await RefreshToken.createToken(
+        refreshToken,
+        user.id,
+        req.get('User-Agent') || 'Unknown Device'
+      );
+
+      const tokenPayload = buildRoleTokenPayload(user.role, { accessToken, refreshToken });
+
+      return res.status(201).json({
+        success: true,
+        message: 'Partner account created successfully.',
+        data: {
+          user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            isVerified: user.isVerified
+          },
+          ...tokenPayload
+        }
+      });
+    } catch (error) {
+      console.error('Partner registration error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to register partner.'
+      });
+    }
   }
 
   static async registerSuperAdmin(req, res) {
@@ -328,27 +445,6 @@ class AuthController {
         });
       }
 
-      if (roleContext === DEFAULT_CUSTOMER_ROLE) {
-        try {
-          const { user, isNew } = await ensureCustomerAccount(normalizedEmail);
-          await sendLoginOTP(user);
-
-          return res.status(200).json({
-            success: true,
-            message: 'OTP sent to your email. Please verify to continue.',
-            data: {
-              email: user.email,
-              isNewUser: isNew
-            }
-          });
-        } catch (err) {
-          return res.status(400).json({
-            success: false,
-            message: err.message || 'Unable to start OTP login.'
-          });
-        }
-      }
-
       const user = await User.findOne({ where: { email: normalizedEmail } });
 
       if (!user) {
@@ -372,10 +468,11 @@ class AuthController {
         });
       }
 
+      // Customer login requires password now
       if (!password) {
         return res.status(400).json({
           success: false,
-          message: 'Password is required for this role.'
+          message: 'Password is required to login.'
         });
       }
 
@@ -455,114 +552,24 @@ class AuthController {
   }
 
   static async sendCustomerOTP(req, res) {
-    try {
-      const { email, fullName } = req.body;
-      if (!email) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email is required.'
-        });
-      }
+    return res.status(400).json({
+      success: false,
+      message: 'OTP login is disabled. Please sign in with your password.'
+    });
+  }
 
-      const { user, isNew } = await ensureCustomerAccount(email, fullName);
-      await sendLoginOTP(user);
-
-      return res.json({
-        success: true,
-        message: 'OTP sent to your email. Please verify to continue.',
-        data: {
-          email: user.email,
-          isNewUser: isNew
-        }
-      });
-    } catch (error) {
-      console.error('Send customer OTP error:', error);
-      return res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to send OTP.'
-      });
-    }
+  static async resendCustomerOTP(req, res) {
+    return res.status(400).json({
+      success: false,
+      message: 'OTP login is disabled. Please sign in with your password.'
+    });
   }
 
   static async verifyCustomerOTP(req, res) {
-    try {
-      const { email, otp } = req.body;
-      if (!email || !otp) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email and OTP are required.'
-        });
-      }
-
-      const normalizedEmail = normalizeEmail(email);
-      const user = await User.findOne({ where: { email: normalizedEmail } });
-
-      if (!user || user.role !== DEFAULT_CUSTOMER_ROLE) {
-        return res.status(404).json({
-          success: false,
-          message: 'Customer account not found. Please use password login for other roles.'
-        });
-      }
-
-      if (!user.isActive) {
-        return res.status(403).json({
-          success: false,
-          message: 'Account is inactive.'
-        });
-      }
-
-      const otpRecord = await EmailOTP.findOne({
-        where: {
-          email: normalizedEmail,
-          type: OTP_TYPES.LOGIN,
-          isUsed: false
-        },
-        order: [['createdAt', 'DESC']]
-      });
-
-      if (!otpRecord) {
-        return res.status(400).json({
-          success: false,
-          message: 'No valid OTP found for this email.'
-        });
-      }
-
-      await otpRecord.verify(otp);
-      await user.resetLoginAttempts?.();
-      await user.update({ isVerified: true, lastLogin: new Date() });
-
-      const { accessToken, refreshToken } = JWTUtils.generateTokenPair(user);
-      await RefreshToken.createToken(
-        refreshToken,
-        user.id,
-        req.get('User-Agent') || 'Unknown Device'
-      );
-
-      const tokenPayload = buildRoleTokenPayload(user.role, { accessToken, refreshToken });
-
-      return res.json({
-        success: true,
-        message: 'OTP verified successfully.',
-        data: {
-          user: {
-            id: user.id,
-            fullName: user.fullName,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-            role: user.role,
-            isVerified: user.isVerified
-          },
-          ...tokenPayload,
-          requiresProfile: !user.fullName
-        }
-      });
-    } catch (error) {
-      console.error('Verify customer OTP error:', error);
-      return res.status(400).json({
-        success: false,
-        message: error.message || 'OTP verification failed.'
-      });
-    }
+    return res.status(400).json({
+      success: false,
+      message: 'OTP login is disabled. Please sign in with your password.'
+    });
   }
 
   static async forgotPassword(req, res) {
@@ -571,18 +578,23 @@ class AuthController {
       const normalizedEmail = normalizeEmail(email);
 
       const user = await User.findOne({ where: { email: normalizedEmail } });
-      if (user) {
-        const otpRecord = await EmailOTP.createOTP(normalizedEmail, OTP_TYPES.PASSWORD_RESET);
-        await EmailService.sendPasswordResetEmail(
-          normalizedEmail,
-          otpRecord.otp,
-          getFirstName(user.fullName)
-        );
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'Account not found. Please sign up to get started.'
+        });
       }
+
+      const otpRecord = await EmailOTP.createOTP(normalizedEmail, OTP_TYPES.PASSWORD_RESET);
+      await EmailService.sendPasswordResetEmail(
+        normalizedEmail,
+        otpRecord.otp,
+        getFirstName(user.fullName)
+      );
 
       return res.json({
         success: true,
-        message: 'If the email exists, you will receive a password reset OTP.'
+        message: 'Password reset OTP sent to your email.'
       });
     } catch (error) {
       console.error('Forgot password error:', error);
@@ -597,6 +609,7 @@ class AuthController {
     try {
       const { email, otp, newPassword } = req.body;
       const normalizedEmail = normalizeEmail(email);
+      const normalizedOtp = normalizeOtp(otp);
 
       const otpRecord = await EmailOTP.findOne({
         where: {
@@ -614,7 +627,7 @@ class AuthController {
         });
       }
 
-      await otpRecord.verify(otp);
+      await otpRecord.verify(normalizedOtp);
 
       const user = await User.findOne({ where: { email: normalizedEmail } });
       if (!user) {
@@ -649,6 +662,71 @@ class AuthController {
       return res.status(400).json({
         success: false,
         message: error.message || 'Password reset failed.'
+      });
+    }
+  }
+
+  static async verifyPasswordResetOTP(req, res) {
+    try {
+      const { email, otp } = req.body;
+      const normalizedEmail = normalizeEmail(email);
+      const normalizedOtp = normalizeOtp(otp);
+
+      const otpRecord = await EmailOTP.findOne({
+        where: {
+          email: normalizedEmail,
+          type: OTP_TYPES.PASSWORD_RESET,
+          isUsed: false
+        },
+        order: [['createdAt', 'DESC']]
+      });
+
+      if (!otpRecord) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid OTP found for password reset.'
+        });
+      }
+
+      // Manually validate without consuming the OTP so reset can proceed with the same code
+      if (otpRecord.isUsed) {
+        return res.status(400).json({
+          success: false,
+          message: 'OTP has already been used.'
+        });
+      }
+
+      if (new Date() > otpRecord.expiresAt) {
+        return res.status(400).json({
+          success: false,
+          message: 'OTP has expired.'
+        });
+      }
+
+      if (otpRecord.attempts >= 3) {
+        return res.status(400).json({
+          success: false,
+          message: 'Too many failed attempts.'
+        });
+      }
+
+      if (otpRecord.otp !== normalizedOtp) {
+        await otpRecord.update({ attempts: otpRecord.attempts + 1 });
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid OTP.'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: 'OTP verified. You can now set a new password.'
+      });
+    } catch (error) {
+      console.error('Verify password reset OTP error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'OTP verification failed.'
       });
     }
   }
@@ -806,6 +884,53 @@ class AuthController {
       return res.status(500).json({
         success: false,
         message: 'Internal server error.'
+      });
+    }
+  }
+
+  static async toggleUserActiveStatus(req, res) {
+    try {
+      const { userId } = req.params;
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required.'
+        });
+      }
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found.'
+        });
+      }
+
+      const newActiveStatus = !user.isActive;
+      await user.update({ isActive: newActiveStatus });
+
+      if (!newActiveStatus) {
+        await RefreshToken.update(
+          { isRevoked: true },
+          { where: { userId: user.id } }
+        );
+      }
+
+      return res.json({
+        success: true,
+        message: `User ${newActiveStatus ? 'activated' : 'deactivated'} successfully.`,
+        data: {
+          id: user.id,
+          email: user.email,
+          isActive: user.isActive
+        }
+      });
+    } catch (error) {
+      console.error('Toggle user active status error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update user status.'
       });
     }
   }
