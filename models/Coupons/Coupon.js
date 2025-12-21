@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize')
 
-const COUPON_TYPES = ['WELCOME', 'SEASONAL', 'OTHER']
+const COUPON_TYPES = ['NORMAL', 'COMBO', 'WELCOME', 'SEASONAL', 'OTHER']
 const DISCOUNT_TYPES = ['PERCENT', 'FIXED']
 
 module.exports = (sequelize) => {
@@ -68,6 +68,14 @@ module.exports = (sequelize) => {
       },
       maxDiscountAmount: {
         type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+      },
+      comboRequiredQuantity: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      comboAllowedQuantity: {
+        type: DataTypes.INTEGER,
         allowNull: true,
       },
     },

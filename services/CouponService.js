@@ -31,7 +31,7 @@ class CouponService {
     return Math.max(0, Math.min(discount, numericAmount))
   }
 
-  static async validateCoupon({ code, user, email, phone, orderAmount, transaction, lockCoupon = false }) {
+  static async validateCoupon({ code, user, email, phone, orderAmount, orderQuantity, transaction, lockCoupon = false }) {
     const normalizedCode = this.normalizeCode(code)
     if (!normalizedCode) {
       throw new Error('Coupon code is required')
@@ -63,6 +63,24 @@ class CouponService {
 
     if (coupon.minOrderAmount && numericAmount < Number(coupon.minOrderAmount)) {
       throw new Error(`Minimum order amount for this coupon is ${coupon.minOrderAmount}`)
+    }
+
+    if (coupon.type === 'COMBO') {
+      const numericQuantity =
+        orderQuantity === undefined || orderQuantity === null ? null : Number(orderQuantity)
+      if (numericQuantity === null || Number.isNaN(numericQuantity) || numericQuantity <= 0) {
+        throw new Error('Order quantity is required for combo coupons')
+      }
+
+      const requiredQty = Number(coupon.comboRequiredQuantity) || 0
+      if (requiredQty > 0 && numericQuantity < requiredQty) {
+        throw new Error(`Minimum quantity for this coupon is ${requiredQty}`)
+      }
+
+      const allowedQty = coupon.comboAllowedQuantity ? Number(coupon.comboAllowedQuantity) : null
+      if (allowedQty && numericQuantity > allowedQty) {
+        throw new Error(`Maximum quantity for this coupon is ${allowedQty}`)
+      }
     }
 
     if (coupon.globalMaxRedemptions) {

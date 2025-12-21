@@ -23,6 +23,8 @@ class CouponController {
         isActive = true,
         minOrderAmount,
         maxDiscountAmount,
+        comboRequiredQuantity,
+        comboAllowedQuantity,
       } = req.body
 
       if (!code || !discountType || discountValue === undefined) {
@@ -72,6 +74,20 @@ class CouponController {
         return res.status(400).json({ success: false, message: 'maxDiscountAmount must be greater than zero when provided' })
       }
 
+      const parsedComboRequired = parseOptionalNumber(comboRequiredQuantity)
+      const parsedComboAllowed = parseOptionalNumber(comboAllowedQuantity)
+      if (type === 'COMBO') {
+        if (parsedComboRequired === null || parsedComboRequired < 1) {
+          return res.status(400).json({ success: false, message: 'comboRequiredQuantity must be at least 1 for combo coupons' })
+        }
+        if (parsedComboAllowed === null || parsedComboAllowed < 1) {
+          return res.status(400).json({ success: false, message: 'comboAllowedQuantity must be at least 1 for combo coupons' })
+        }
+        if (parsedComboAllowed < parsedComboRequired) {
+          return res.status(400).json({ success: false, message: 'comboAllowedQuantity must be greater than or equal to comboRequiredQuantity' })
+        }
+      }
+
       const coupon = await Coupon.create({
         code: code.trim().toUpperCase(),
         type,
@@ -84,6 +100,8 @@ class CouponController {
         isActive: Boolean(isActive),
         minOrderAmount: parsedMinOrder,
         maxDiscountAmount: parsedMaxDiscount,
+        comboRequiredQuantity: type === 'COMBO' ? parsedComboRequired : null,
+        comboAllowedQuantity: type === 'COMBO' ? parsedComboAllowed : null,
       })
 
       return res.status(201).json({
@@ -117,6 +135,8 @@ class CouponController {
         isActive,
         minOrderAmount,
         maxDiscountAmount,
+        comboRequiredQuantity,
+        comboAllowedQuantity,
       } = req.body
 
       const updates = {}
@@ -174,11 +194,46 @@ class CouponController {
         }
         updates.maxDiscountAmount = parsedMax
       }
+      if (comboRequiredQuantity !== undefined) {
+        const parsedComboRequired = parseOptionalNumber(comboRequiredQuantity)
+        if (parsedComboRequired !== null && parsedComboRequired < 1) {
+          return res.status(400).json({ success: false, message: 'comboRequiredQuantity must be at least 1 for combo coupons' })
+        }
+        updates.comboRequiredQuantity = parsedComboRequired
+      }
+      if (comboAllowedQuantity !== undefined) {
+        const parsedComboAllowed = parseOptionalNumber(comboAllowedQuantity)
+        if (parsedComboAllowed !== null && parsedComboAllowed < 1) {
+          return res.status(400).json({ success: false, message: 'comboAllowedQuantity must be at least 1 for combo coupons' })
+        }
+        updates.comboAllowedQuantity = parsedComboAllowed
+      }
 
       const nextStart = updates.startAt !== undefined ? updates.startAt : coupon.startAt
       const nextEnd = updates.endAt !== undefined ? updates.endAt : coupon.endAt
       if (nextStart && nextEnd && nextStart > nextEnd) {
         return res.status(400).json({ success: false, message: 'startAt must be before endAt' })
+      }
+
+      const nextType = updates.type ?? coupon.type
+      const nextComboRequired =
+        updates.comboRequiredQuantity !== undefined ? updates.comboRequiredQuantity : coupon.comboRequiredQuantity
+      const nextComboAllowed =
+        updates.comboAllowedQuantity !== undefined ? updates.comboAllowedQuantity : coupon.comboAllowedQuantity
+
+      if (nextType === 'COMBO') {
+        if (nextComboRequired === null || nextComboRequired === undefined || nextComboRequired < 1) {
+          return res.status(400).json({ success: false, message: 'comboRequiredQuantity must be at least 1 for combo coupons' })
+        }
+        if (nextComboAllowed === null || nextComboAllowed === undefined || nextComboAllowed < 1) {
+          return res.status(400).json({ success: false, message: 'comboAllowedQuantity must be at least 1 for combo coupons' })
+        }
+        if (nextComboAllowed < nextComboRequired) {
+          return res.status(400).json({ success: false, message: 'comboAllowedQuantity must be greater than or equal to comboRequiredQuantity' })
+        }
+      } else {
+        updates.comboRequiredQuantity = null
+        updates.comboAllowedQuantity = null
       }
 
       await coupon.update(updates)
@@ -215,7 +270,7 @@ class CouponController {
   }
 
   static async validate(req, res) {
-    const { code, orderAmount } = req.body
+    const { code, orderAmount, orderQuantity } = req.body
     try {
       const { coupon, discountAmount } = await CouponService.validateCoupon({
         code,
@@ -223,6 +278,7 @@ class CouponController {
         email: req.user.email,
         phone: req.user.phoneNumber,
         orderAmount,
+        orderQuantity,
       })
 
       let remainingGlobal = null

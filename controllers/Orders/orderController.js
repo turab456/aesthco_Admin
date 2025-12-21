@@ -328,6 +328,11 @@ class OrderController {
         }
       })
 
+      const totalQuantity = mappedItems.reduce(
+        (sum, item) => sum + Number(item.quantity || 0),
+        0,
+      )
+
       const subtotal = mappedItems.reduce((sum, item) => sum + item.totalPrice, 0)
       const shippingFee = subtotal >= shippingSetting.threshold ? 0 : shippingSetting.fee
       const orderPayloadBase = {
@@ -356,6 +361,7 @@ class OrderController {
             email: req.user.email,
             phone: req.user.phoneNumber,
             orderAmount: subtotal,
+            orderQuantity: totalQuantity,
             transaction: t,
             lockCoupon: true,
           })
