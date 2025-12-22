@@ -65,6 +65,7 @@ class CouponService {
       throw new Error(`Minimum order amount for this coupon is ${coupon.minOrderAmount}`)
     }
 
+    let amountForDiscount = numericAmount
     if (coupon.type === 'COMBO') {
       const numericQuantity =
         orderQuantity === undefined || orderQuantity === null ? null : Number(orderQuantity)
@@ -78,9 +79,9 @@ class CouponService {
       }
 
       const allowedQty = coupon.comboAllowedQuantity ? Number(coupon.comboAllowedQuantity) : null
-      if (allowedQty && numericQuantity > allowedQty) {
-        throw new Error(`Maximum quantity for this coupon is ${allowedQty}`)
-      }
+      const eligibleQty = allowedQty ? Math.min(numericQuantity, allowedQty) : numericQuantity
+      const unitAmount = numericAmount / numericQuantity
+      amountForDiscount = Math.min(numericAmount, unitAmount * eligibleQty)
     }
 
     if (coupon.globalMaxRedemptions) {
@@ -104,7 +105,7 @@ class CouponService {
       }
     }
 
-    const discountAmount = this.calculateDiscount(coupon, numericAmount)
+    const discountAmount = this.calculateDiscount(coupon, amountForDiscount)
     return { coupon, discountAmount }
   }
 }
