@@ -9,9 +9,9 @@ module.exports = {
       'sellerId',
       {
         type: Sequelize.INTEGER,
-        allowNull: true, // Keep optional for now to avoid breaking existing data
+        allowNull: true,
         references: {
-          model: 'Sellers',
+          model: { tableName: 'Sellers', schema: 'public' },
           key: 'id'
         },
         onUpdate: 'CASCADE',
@@ -27,7 +27,7 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
-          model: 'Sellers',
+          model: { tableName: 'Sellers', schema: 'public' },
           key: 'id'
         },
         onUpdate: 'CASCADE',
