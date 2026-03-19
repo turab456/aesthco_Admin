@@ -104,6 +104,14 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      sellerId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'Sellers',
+          key: 'id'
+        }
+      },
     },
     {
       tableName: 'Orders',
@@ -135,6 +143,7 @@ module.exports = (sequelize) => {
   })
 
   Order.associate = (models) => {
+    Order.belongsTo(models.Seller, { foreignKey: 'sellerId', as: 'seller' })
     Order.belongsTo(models.User, { foreignKey: 'userId', as: 'customer' })
     Order.belongsTo(models.User, { foreignKey: 'assignedPartnerId', as: 'assignedPartner' })
     Order.hasMany(models.OrderItem, { foreignKey: 'orderId', as: 'items', onDelete: 'CASCADE' })
