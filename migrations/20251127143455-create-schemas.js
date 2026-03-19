@@ -9,3 +9,4 @@ module.exports = {
     await queryInterface.sequelize.query('DROP SCHEMA IF EXISTS masters CASCADE;');
   },
 };
+// hello
