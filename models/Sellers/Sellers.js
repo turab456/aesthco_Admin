@@ -42,7 +42,6 @@ module.exports = (sequelize) => {
 
     }, {
         tableName: 'Sellers',
-        schema: 'catalog',
         timestamps: true
     });
 

@@ -59,6 +59,14 @@ module.exports = (sequelize) => {
       type: DataTypes.JSON,
       allowNull: true,
       defaultValue: []
+    },
+    sellerId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Sellers',
+        key: 'id'
+      }
     }
   }, {
     tableName: 'Products',
@@ -67,6 +75,11 @@ module.exports = (sequelize) => {
   });
 
   Product.associate = (models) => {
+    Product.belongsTo(models.Seller, {
+      foreignKey: 'sellerId',
+      as: 'seller'
+    });
+
     Product.belongsTo(models.Category, {
       foreignKey: 'categoryId',
       as: 'category'
